@@ -1,4 +1,4 @@
-import PianoVisualizer from '@/components/PianoVisualizer';
+import PianoVisualizer from '@/components/PianoVisualizer.jsx';
 
 export default function Home() {
   return (
