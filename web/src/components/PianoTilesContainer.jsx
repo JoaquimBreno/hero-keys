@@ -1,25 +1,57 @@
 // PianoVisualizationComponent.jsx
-'use client';
-import styles from './PianoVisualizer.module.css';
+import React, { useState, useCallback, useEffect } from 'react';
+import StylishPiano from './StylishPiano';
+import NotesVisualizer from './NotesVisualizer';
+import AudioPlayer from './AudioPlayer';
+import styles from './PianoTiles.module.css';
 
-export default function PianoTilesContainer({ midiData, fileName }) {
+export default function PianoTilesContainer({ midiData, fileName, audioData }) {
+  const [currentPlaybackTime, setCurrentPlaybackTime] = useState(0);
+  
+  // Handle time updates from the audio player
+  const handleTimeUpdate = useCallback((timeMs) => {
+    setCurrentPlaybackTime(timeMs);
+  }, []);
+  
+  // Handle note plays from the piano
+  const handleNotePlay = useCallback((midiEvent) => {
+    console.log('Note played:', midiEvent);
+    // You could add sound synthesis here
+  }, []);
+  
   return (
-    <div className={styles.pianoVisualization}>
-      <div className={styles.midiInfoContainer}>
-        <h4 className={styles.midiInfoTitle}>MIDI File Information:</h4>
-        <p className={styles.midiInfoItem}>Format: {midiData.format}</p>
-        <p className={styles.midiInfoItem}>Number of tracks: {midiData.track.length}</p>
-        <p className={styles.midiInfoItem}>Time division: {midiData.timeDivision}</p>
+    <div className={styles.premiumContainer}>
+      <div className={styles.blurredBackground}></div>
+      
+      <div className={styles.contentContainer}>
+        <div className={styles.header}>
+          <h1 className={styles.title}>{fileName || "MIDI Visualization"}</h1>
+        </div>
         
-        <div className={styles.tracksContainer}>
-          <h4 className={styles.tracksTitle}>Tracks:</h4>
-          <ul className={styles.tracksList}>
-            {midiData.track.map((track, index) => (
-              <li key={index} className={styles.trackItem}>
-                Track {index + 1}: {track.event.length} events
-              </li>
-            ))}
-          </ul>
+        {/* Notes visualization with particles */}
+        <div className={styles.visualizerSection}>
+          <NotesVisualizer 
+            midiData={midiData}
+            currentTime={currentPlaybackTime}
+          />
+        </div>
+        
+        {/* Piano visualization */}
+        <div className={styles.pianoSection}>
+          <StylishPiano 
+            midiData={midiData}
+            currentTime={currentPlaybackTime}
+            onNotePlay={handleNotePlay}
+          />
+        </div>
+        
+        {/* Audio player */}
+        <div className={styles.playerSection}>
+          <AudioPlayer 
+            audioData={audioData}
+            onTimeUpdate={handleTimeUpdate}
+            fileName={fileName}
+          />
         </div>
       </div>
     </div>

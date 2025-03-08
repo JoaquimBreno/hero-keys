@@ -74,6 +74,7 @@ export default function PianoVisualizer() {
                 const midiFile = MIDIParser.parse(byteArray);
                 console.log('MIDI file parsed:', midiFile);
                 
+                setIsTransitioning(true);
                 // For now, just log the tracks
                 if (midiFile && midiFile.track) {
                   setTimeout(() => {
@@ -151,45 +152,6 @@ export default function PianoVisualizer() {
     }
   }, [midiLoaded]);
 
-  // Function for piano visualization
-  const renderPianoVisualization = (midiData) => {
-    const container = pianoVisualizationRef.current;
-    if (container) {
-      // Create a styled container for the MIDI info
-      const pianoInfoDiv = document.createElement('div');
-      pianoInfoDiv.style.width = '100%';
-      pianoInfoDiv.style.height = '100%';
-      pianoInfoDiv.style.padding = '20px';
-      pianoInfoDiv.style.color = 'var(--text-primary)';
-      pianoInfoDiv.style.overflow = 'auto';
-      
-      // Add MIDI information
-      pianoInfoDiv.innerHTML = `
-        <div>
-          <h4 style="margin-bottom: 15px; font-size: 1.2rem;">MIDI File Information:</h4>
-          <p style="margin-bottom: 8px;">Format: ${midiData.format}</p>
-          <p style="margin-bottom: 8px;">Number of tracks: ${midiData.track.length}</p>
-          <p style="margin-bottom: 15px;">Time division: ${midiData.timeDivision}</p>
-          
-          <div>
-            <h4 style="margin-bottom: 10px; font-size: 1.1rem;">Tracks:</h4>
-            <ul style="list-style-type: none; padding: 0;">
-              ${midiData.track.map((track, index) => `
-                <li style="margin-bottom: 5px; padding: 8px; background-color: rgba(0,0,0,0.2); border-radius: 4px;">
-                  Track ${index + 1}: ${track.event.length} events
-                </li>
-              `).join('')}
-            </ul>
-          </div>
-        </div>
-      `;
-      
-      // Clear previous content and add the new info
-      container.innerHTML = '';
-      container.appendChild(pianoInfoDiv);
-    }
-  };
-
   const goBack = () => {
     setFileName('');
     setMidiLoaded(null);
@@ -226,9 +188,7 @@ export default function PianoVisualizer() {
     backgroundColor: 'var(--background)',
     display: 'flex',
     flexDirection: 'column',
-    opacity: isTransitioning ? 0 : 1,
-    transform: isTransitioning ? 'scale(0.95)' : 'scale(1)',
-    transition: 'opacity 0.4s ease, transform 0.4s ease'
+    opacity: isTransitioning ? 0 : 1  
   };
 
   // Back button style
@@ -261,7 +221,7 @@ export default function PianoVisualizer() {
         // Full-screen visualization when MIDI is loaded
           <div 
             style={fullScreenVisualizationStyle}
-            className={isTransitioning ? styles.transitioningContainer : ''}
+            className={isTransitioning ? '' : styles.zoomInAnimation}
           >
             <div style={{ padding: '20px', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
               <h3 style={{ fontSize: '1.1rem', color: 'var(--text-secondary)' }}>

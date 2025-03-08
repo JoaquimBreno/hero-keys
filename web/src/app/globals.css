@@ -63,7 +63,7 @@ header {
 .logo {
   font-size: 2.5rem;
   margin-bottom: 16px;
-  color: var(--primary-color);
+  color: var(--foreground);
   text-shadow: 0 0 15px var(--primary-glow);
   font-weight: 700;
   letter-spacing: -1px;

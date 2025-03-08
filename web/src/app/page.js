@@ -4,7 +4,7 @@ export default function Home() {
   return (
     <div className="container">
       <header>
-        <div className="logo">Moises Piano Visualizer</div>
+        <div className="logo">🎹 HeroKeys 🎹</div>
         <p>Visualize suas músicas MIDI com animações elegantes em estilo neon</p>
       </header>
       
