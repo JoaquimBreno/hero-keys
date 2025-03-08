@@ -4,7 +4,7 @@ import Moises from 'moises/sdk';
 import fs from 'fs';
 import path from 'path';
 
-const moises = new Moises({ apiKey: "8f71aad7-2ca6-412f-bba2-8bdf0ee02920" });
+const moises = new Moises({ apiKey: "" });
 
 export async function POST(request) {
   console.log('processAudio API called');
