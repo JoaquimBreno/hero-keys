@@ -50,3 +50,75 @@
       background-color: rgba(0, 0, 0, 0.4);
     }
   }
+
+
+.midiInfoContainer {
+  width: 100%;
+  height: 100%;
+  padding: 20px;
+  overflow: auto;
+  color: var(--text-primary);
+}
+
+.midiInfoTitle {
+  margin-bottom: 15px;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.midiInfoItem {
+  margin-bottom: 8px;
+  line-height: 1.5;
+}
+
+.tracksContainer {
+  margin-top: 20px;
+}
+
+.tracksTitle {
+  margin-bottom: 10px;
+  font-size: 1.1rem;
+  font-weight: 500;
+}
+
+.tracksList {
+  list-style-type: none;
+  padding: 0;
+}
+
+.trackItem {
+  margin-bottom: 5px;
+  padding: 8px;
+  background-color: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+
+.trackItem:hover {
+  background-color: rgba(0, 0, 0, 0.3);
+}
+
+.transitioningContainer {
+  animation: fadeIn 0.4s ease forwards;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  .trackItem {
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+  
+  .trackItem:hover {
+    background-color: rgba(255, 255, 255, 0.15);
+  }
+}
