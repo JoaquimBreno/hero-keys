@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import Script from 'next/script';
 import styles from './PianoVisualizer.module.css';
 import MIDIParser from 'midi-parser-js';
+import PianoTilesContainer from './PianoTilesContainer';
 
 export default function PianoVisualizer() {
   const dropZoneRef = useRef(null);
@@ -12,7 +13,8 @@ export default function PianoVisualizer() {
   const [isLoaded, setIsLoaded] = useState(false);
   const [fileName, setFileName] = useState('');
   const [midiLoaded, setMidiLoaded] = useState(null);
-  
+  const [isTransitioning, setIsTransitioning] = useState(false);
+
   // Handle MIDI Parser script load
   const handleScriptLoad = () => {
     console.log('MIDI Parser script loaded');
@@ -74,8 +76,14 @@ export default function PianoVisualizer() {
                 
                 // For now, just log the tracks
                 if (midiFile && midiFile.track) {
-                  setMidiLoaded(midiFile);
-                  console.log(`Loaded ${midiFile.track.length} tracks`);
+                  setTimeout(() => {
+                    setMidiLoaded(midiFile);
+                    console.log(`Loaded ${midiFile.track.length} tracks`);
+                    // End transition after a delay
+                    setTimeout(() => {
+                      setIsTransitioning(false);
+                    }, 300);
+                  }, 500);
                 }
               } else {
                 console.error('MIDIParser not loaded');
@@ -133,7 +141,7 @@ export default function PianoVisualizer() {
       dropZone.removeEventListener('drop', handleDrop, false);
       fileInput.removeEventListener('change', handleFileInputChange, false);
     };
-  }, [isLoaded]);
+  }, [isLoaded, midiLoaded]);
 
   // Effect for rendering piano visualization when MIDI is loaded
   useEffect(() => {
@@ -217,7 +225,10 @@ export default function PianoVisualizer() {
     zIndex: 1000,
     backgroundColor: 'var(--background)',
     display: 'flex',
-    flexDirection: 'column'
+    flexDirection: 'column',
+    opacity: isTransitioning ? 0 : 1,
+    transform: isTransitioning ? 'scale(0.95)' : 'scale(1)',
+    transition: 'opacity 0.4s ease, transform 0.4s ease'
   };
 
   // Back button style
@@ -248,26 +259,28 @@ export default function PianoVisualizer() {
       
       {midiLoaded ? (
         // Full-screen visualization when MIDI is loaded
-        <div style={fullScreenVisualizationStyle}>
-          <div style={{ padding: '20px', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-            <h3 style={{ fontSize: '1.1rem', color: 'var(--text-secondary)' }}>
-              Arquivo carregado: {fileName}
-            </h3>
-          </div>
-          
           <div 
-            className={styles.pianoVisualization} 
-            id="piano-visualization"
-            ref={pianoVisualizationRef}
-            style={{ flex: 1, width: '100%' }}
-          />
-          
-          <button 
-            style={backButtonStyle}
-            onClick={goBack}
+            style={fullScreenVisualizationStyle}
+            className={isTransitioning ? styles.transitioningContainer : ''}
           >
-            Voltar
-          </button>
+            <div style={{ padding: '20px', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+              <h3 style={{ fontSize: '1.1rem', color: 'var(--text-secondary)' }}>
+                Arquivo carregado: {fileName}
+              </h3>
+            </div>
+            
+            <PianoTilesContainer
+              midiData={midiLoaded} 
+              fileName={fileName}
+            />
+          
+            
+            <button 
+              style={backButtonStyle}
+              onClick={goBack}
+            >
+              Voltar
+            </button>
         </div>
       ) : (
         // File upload interface
