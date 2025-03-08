@@ -1,0 +1,114 @@
+.audioPlayer {
+    width: 100%;
+    padding: 10px;
+    border-radius: 8px;
+  }
+  
+  .playerInfo {
+    margin-bottom: 12px;
+  }
+  
+  .fileName {
+    font-size: 14px;
+    font-weight: 500;
+    color: #555;
+  }
+  
+  .playerControls {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+  }
+  
+  .playButton {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: #00d9e8;
+      color: white;
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 5px rgba(0, 217, 232, 0.3);
+    }
+
+.playButton:hover {
+    background: #00c6d4;
+    transform: scale(1.05);
+}
+
+.pauseButton {
+    font-size: 12px;
+}
+
+.timeInfo {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.currentTime, .duration {
+    font-size: 12px;
+    color: #555;
+    font-weight: 500;
+    min-width: 35px;
+}
+
+.seekBar {
+    flex: 1;
+    height: 5px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: #e0e0e0;
+    border-radius: 3px;
+    outline: none;
+    cursor: pointer;
+}
+
+.seekBar::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #00d9e8;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.seekBar::-webkit-slider-thumb:hover {
+    transform: scale(1.2);
+    background: #00c6d4;
+}
+
+.seekBar::-moz-range-thumb {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #00d9e8;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.seekBar::-moz-range-thumb:hover {
+    transform: scale(1.2);
+    background: #00c6d4;
+}
+
+.seekBar::-webkit-slider-runnable-track {
+    height: 5px;
+    border-radius: 3px;
+}
+
+.seekBar::-moz-range-track {
+    height: 5px;
+    border-radius: 3px;
+}

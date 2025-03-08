@@ -1,0 +1,12 @@
+.visualizerContainer {
+    width: 100%;
+    height: 100%;
+    position: relative;
+  }
+  
+.visualizerCanvas {
+    width: 100%;
+    height: 100%;
+    background: transparent;
+    border-radius: 8px;
+}

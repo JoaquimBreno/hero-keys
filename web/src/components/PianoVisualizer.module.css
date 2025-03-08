@@ -98,18 +98,18 @@
   background-color: rgba(0, 0, 0, 0.3);
 }
 
-.transitioningContainer {
-  animation: fadeIn 0.4s ease forwards;
+.zoomInAnimation {
+  animation: zoomIn 0.5s ease-out forwards;
 }
 
-@keyframes fadeIn {
-  from {
+@keyframes zoomIn {
+  0% {
     opacity: 0;
-    transform: scale(0.95);
+    transform: scale(0.85) translateY(20px);
   }
-  to {
+  100% {
     opacity: 1;
-    transform: scale(1);
+    transform: scale(1) translateY(0);
   }
 }
 
