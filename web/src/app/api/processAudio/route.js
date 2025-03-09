@@ -1,8 +1,8 @@
-// FILE: app/api/processAudio/route.js
 import { NextResponse } from 'next/server';
 import Moises from 'moises/sdk';
 import fs from 'fs';
 import path from 'path';
+import fetch from 'node-fetch';
 
 const moises = new Moises({ apiKey: "" });
 
@@ -44,10 +44,26 @@ export async function POST(request) {
     await moises.processFile("piano_separation", "temp/song.mp3", "temp");
     await moises.processFile("chords_piano", "temp/piano_output.mp3", "temp");
 
-    // Converter para Midi
+    // Ler o arquivo piano_output.mp3
+    const pianoOutputPath = path.join(tempDir, 'piano_output.mp3');
+    const pianoOutputBuffer = fs.readFileSync(pianoOutputPath);
+    const pianoOutputBase64 = pianoOutputBuffer.toString('base64');
+
+    // Enviar o arquivo para a API Python
+    const response = await fetch('http://localhost:8000/generate_midi', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ audioBase64: pianoOutputBase64, filename: 'piano_output.mp3' })
+    });
+
+    if (!response.ok) {
+      throw new Error('Erro ao enviar o arquivo para a API Python');
+    }
+
+    const { midiBase64 } = await response.json();
 
     console.log('Arquivo processado e salvo com sucesso.');
-    return NextResponse.json({ success: true }, { status: 200 });
+    return NextResponse.json({ midiBase64 }, { status: 200 });
   } catch (error) {
     console.error('Erro ao processar o arquivo:', error);
     return NextResponse.json({ error: 'Erro ao salvar o arquivo.' }, { status: 500 });
