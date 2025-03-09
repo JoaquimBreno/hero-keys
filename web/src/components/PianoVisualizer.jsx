@@ -80,7 +80,6 @@ export default function PianoVisualizer() {
                 // For now, just log the tracks
                 if (midiFile && midiFile.track) {
                   setTimeout(() => {
-                    midiFile = processMIDIFile(midiFile);
                     setMidiLoaded(midiFile);
                     console.log(`Loaded ${midiFile.track.length} tracks`);
                     // End transition after a delay
@@ -228,8 +227,8 @@ export default function PianoVisualizer() {
   const backButtonStyle = {
     position: 'fixed',
     bottom: '20px',
-    left: '50%',
-    transform: 'translateX(-50%)',
+    left: '100%',
+    transform: 'translateX(-120%)',
     zIndex: 1001,
     padding: '10px 20px',
     backgroundColor: 'var(--primary-color)',

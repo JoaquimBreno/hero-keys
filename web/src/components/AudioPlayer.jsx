@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import styles from './AudioPlayer.module.css';
 
-export default function AudioPlayer({ audioData, onTimeUpdate, fileName }) {
+export default function AudioPlayer({ audioData, onTimeUpdate, fileName, onVisualizerToggle, showSheetMusic }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [displayTime, setDisplayTime] = useState(0); // For display purposes only
   const [duration, setDuration] = useState(0);
@@ -138,6 +138,18 @@ export default function AudioPlayer({ audioData, onTimeUpdate, fileName }) {
           
           <span className={styles.duration}>{formatTime(duration)}</span>
         </div>
+        
+        {/* Add toggle button for switching visualizers */}
+        {onVisualizerToggle && (
+          <button
+            className={`${styles.toggleButton} ${showSheetMusic ? styles.sheetMusicActive : ''}`}
+            onClick={() => onVisualizerToggle(!showSheetMusic)}
+            aria-label={showSheetMusic ? 'Show Notes' : 'Show Sheet Music'}
+            title={showSheetMusic ? 'Show Notes' : 'Show Sheet Music'}
+          >
+            {showSheetMusic ? '🎹' : '🎼'}
+          </button>
+        )}
       </div>
     </div>
   );
