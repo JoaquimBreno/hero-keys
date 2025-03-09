@@ -1,12 +1,14 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import StylishPiano from './StylishPiano';
 import NotesVisualizer from './NotesVisualizer';
+import SheetMusicVisualizer from './SheetMusicVisualizer';
 import AudioPlayer from './AudioPlayer';
 import styles from './PianoTiles.module.css';
 
 export default function PianoTilesContainer({ midiData, fileName, audioData }) {
   const [currentPlaybackTime, setCurrentPlaybackTime] = useState(0);
   const [keyPositions, setKeyPositions] = useState({});
+  const [showSheetMusic, setShowSheetMusic] = useState(false);
   const containerRef = useRef(null);
   const timeUpdateRef = useRef(null);
   
@@ -43,19 +45,31 @@ export default function PianoTilesContainer({ midiData, fileName, audioData }) {
     setKeyPositions(positions);
   }, []);
   
+  // Handle toggling between visualizers
+  const handleVisualizerToggle = useCallback((showSheet) => {
+    setShowSheetMusic(showSheet);
+  }, []);
+  
   return (
     <div className={styles.premiumContainer}>
       <div className={styles.blurredBackground}></div>
       
       <div className={styles.contentContainer}>
-        {/* Notes visualization with particles */}
+        {/* Visualization area - conditionally render based on toggle state */}
         <div className={styles.visualizerSection}>
-          <NotesVisualizer 
-            midiData={midiData}
-            currentTime={currentPlaybackTime}
-            keyPositions={keyPositions}
-            timeOffset={0}
-          />
+          {showSheetMusic ? (
+            <SheetMusicVisualizer 
+              midiData={midiData}
+              currentTime={currentPlaybackTime}
+            />
+          ) : (
+            <NotesVisualizer 
+              midiData={midiData}
+              currentTime={currentPlaybackTime}
+              keyPositions={keyPositions}
+              timeOffset={0}
+            />
+          )}
         </div>
         
         {/* Piano visualization */}
@@ -68,12 +82,14 @@ export default function PianoTilesContainer({ midiData, fileName, audioData }) {
           />
         </div>
         
-        {/* Audio player */}
+        {/* Audio player with visualizer toggle */}
         <div className={styles.playerSection}>
           <AudioPlayer 
             audioData={audioData}
             onTimeUpdate={handleTimeUpdate}
             fileName={fileName}
+            onVisualizerToggle={handleVisualizerToggle}
+            showSheetMusic={showSheetMusic}
           />
         </div>
       </div>

@@ -114,3 +114,40 @@
     height: 5px;
     border-radius: 3px;
 }
+
+.toggleButton {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: #9b59b6;
+    color: white;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 5px rgba(155, 89, 182, 0.3);
+}
+
+.toggleButton:hover {
+    background: #8e44ad;
+    transform: scale(1.05);
+}
+
+.sheetMusicActive {
+    background: #3498db;
+}
+
+.sheetMusicActive:hover {
+    background: #2980b9;
+}
+
+.tablatureActive {
+    background: #e67e22;
+}
+
+.tablatureActive:hover {
+    background: #d35400;
+}
