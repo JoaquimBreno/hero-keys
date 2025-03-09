@@ -7,7 +7,7 @@ import styles from './PianoTiles.module.css';
 
 export default function PianoTilesContainer({ midiData, fileName, audioData }) {
   const [currentPlaybackTime, setCurrentPlaybackTime] = useState(0);
-  
+  console.log('audioData:', audioData); 
   // Handle time updates from the audio player
   const handleTimeUpdate = useCallback((timeMs) => {
     setCurrentPlaybackTime(timeMs);

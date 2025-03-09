@@ -257,10 +257,6 @@ function getBlackKeyPosition(midiNote) {
     octavesFromStart = octavesFromStart*0.97
   }
   // Calculate the total number of white keys before this note
-  console.log(midiNote)
-  console.log(octavesFromStart)
-  console.log(whiteKeysBefore)
-  console.log(whiteKeysPerOctave)
   const totalWhiteKeysBefore = (octavesFromStart * whiteKeysPerOctave) + whiteKeysBefore;
   
   // Position is based on white keys

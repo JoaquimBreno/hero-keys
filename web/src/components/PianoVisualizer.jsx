@@ -14,6 +14,7 @@ export default function PianoVisualizer() {
   const [fileName, setFileName] = useState('');
   const [midiLoaded, setMidiLoaded] = useState(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [audioFile, setAudioFile] = useState(null);
 
   // Handle MIDI Parser script load
   const handleScriptLoad = () => {
@@ -152,6 +153,36 @@ export default function PianoVisualizer() {
     }
   }, [midiLoaded]);
 
+  useEffect(() => {
+    // Função para carregar o arquivo de áudio mockado
+    const loadMockAudio = async () => {
+      try {
+        // Caminho para o arquivo de áudio na pasta pública
+        const audioUrl = 'mozart.mp3'; // Ajuste o caminho conforme necessário
+        
+        // Buscar o arquivo
+        const response = await fetch(audioUrl);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch audio: ${response.statusText}`);
+        }
+        
+        // Converter para blob
+        const blob = await response.blob();
+        
+        // Criar um objeto File a partir do blob
+        const file = new File([blob], 'mozart.mp3', { type: 'audio/mpeg' });
+        
+        // Armazenar o arquivo
+        setAudioFile(file);
+        console.log('Mock audio file loaded:', file);
+      } catch (error) {
+        console.error('Error loading mock audio:', error);
+      }
+    };
+    
+    loadMockAudio();
+  }, []);
+
   const goBack = () => {
     setFileName('');
     setMidiLoaded(null);
@@ -232,6 +263,7 @@ export default function PianoVisualizer() {
             <PianoTilesContainer
               midiData={midiLoaded} 
               fileName={fileName}
+              audioData={audioFile}
             />
           
             
