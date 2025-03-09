@@ -38,11 +38,15 @@ export default function AudioPlayer({ audioData, onTimeUpdate, fileName, onVisua
     const updateTime = () => {
       if (audioRef.current && isPlaying && !seekingRef.current) {
         const time = audioRef.current.currentTime;
+        const previousTime = currentTimeRef.current;
         currentTimeRef.current = time;
-        setDisplayTime(time); // Update display time (less frequent)
         
-        // Report current time to parent component
-        if (onTimeUpdate) {
+        // Only update display time (less frequent) to avoid re-renders
+        setDisplayTime(time); 
+        
+        // Always report current time to parent for synchronization
+        // even for small changes to ensure precise note visualization
+        if (onTimeUpdate && (Math.abs(time - previousTime) > 0.01 || time !== previousTime)) {
           onTimeUpdate(time * 1000); // Convert to milliseconds for MIDI sync
         }
       }

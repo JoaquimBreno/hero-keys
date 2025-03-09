@@ -5,6 +5,9 @@ import SheetMusicVisualizer from './SheetMusicVisualizer';
 import AudioPlayer from './AudioPlayer';
 import styles from './PianoTiles.module.css';
 
+// Define consistent timing offsets for all components
+const NOTE_TIMING_OFFSET = -1000; // milliseconds
+
 export default function PianoTilesContainer({ midiData, fileName, audioData }) {
   const [currentPlaybackTime, setCurrentPlaybackTime] = useState(0);
   const [keyPositions, setKeyPositions] = useState({});
@@ -19,10 +22,8 @@ export default function PianoTilesContainer({ midiData, fileName, audioData }) {
       cancelAnimationFrame(timeUpdateRef.current);
     }
     
-    // Schedule the update using requestAnimationFrame for better performance
-    timeUpdateRef.current = requestAnimationFrame(() => {
-      setCurrentPlaybackTime(timeMs);
-    });
+    // Immediately update for better responsiveness
+    setCurrentPlaybackTime(timeMs);
   }, []);
   
   // Clean up animation frame on unmount
@@ -67,7 +68,8 @@ export default function PianoTilesContainer({ midiData, fileName, audioData }) {
               midiData={midiData}
               currentTime={currentPlaybackTime}
               keyPositions={keyPositions}
-              timeOffset={0}
+              verticalOffset={2} // Small pixel adjustment for perfect alignment
+              timingOffset={NOTE_TIMING_OFFSET} // Pass the timing offset
             />
           )}
         </div>
@@ -77,6 +79,7 @@ export default function PianoTilesContainer({ midiData, fileName, audioData }) {
           <StylishPiano 
             midiData={midiData}
             currentTime={currentPlaybackTime}
+            timingOffset={NOTE_TIMING_OFFSET} // Pass the same timing offset
             onNotePlay={handleNotePlay}
             onKeyPositionsUpdate={handleKeyPositionsUpdate}
           />

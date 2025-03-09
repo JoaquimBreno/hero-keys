@@ -6,24 +6,25 @@ const NotesVisualizer = memo(function NotesVisualizer({
   midiData, 
   currentTime = 0, 
   keyPositions = {},
-  timeOffset = 0, // Add configurable time offset instead of hardcoded value
-  lookaheadTime = 2000, // Reduced from 10000ms to 3000ms (3 seconds ahead)
-  verticalOffset = 0 // Fine-tune vertical position of notes
+  lookaheadTime = 3000, // In milliseconds (3 seconds ahead)
+  timingOffset = 0, // Add timing offset parameter with default value
 }) {
   const canvasRef = useRef(null);
   const particlesRef = useRef([]);
   const activeNotesRef = useRef(new Set());
   const animationRef = useRef(null);
   const processedNotesRef = useRef(null); // Store processed notes in a ref
-  const currentTimeRef = useRef(currentTime); // Store current time in ref
+  const currentTimeRef = useRef(currentTime); // Store current time in ref (ms)
   const keyPositionsRef = useRef(keyPositions); // Store key positions in ref
   const lastFrameTimeRef = useRef(0); // Track last frame time to ensure consistent timing
-  const lookaheadTimeRef = useRef(lookaheadTime); // Store lookahead time in ref
+  const lookaheadTimeRef = useRef(lookaheadTime); // Store lookahead time in ref (ms)
+  const timingOffsetRef = useRef(timingOffset); // Store timing offset in ref
   
   // Update refs when props change without triggering renders
   useEffect(() => {
-    currentTimeRef.current = currentTime + timeOffset;
-  }, [currentTime, timeOffset]);
+    currentTimeRef.current = currentTime;
+    console.log("Current time updated (ms):", currentTime);
+  }, [currentTime]);
   
   useEffect(() => {
     keyPositionsRef.current = keyPositions;
@@ -33,10 +34,25 @@ const NotesVisualizer = memo(function NotesVisualizer({
     lookaheadTimeRef.current = lookaheadTime;
   }, [lookaheadTime]);
   
+  useEffect(() => {
+    timingOffsetRef.current = timingOffset;
+  }, [timingOffset]);
+  
   // Process MIDI data only when it changes
   useEffect(() => {
     if (midiData) {
       processedNotesRef.current = processMidiData(midiData);
+      
+      // Log the earliest and latest notes to help debug timing issues
+      if (processedNotesRef.current && processedNotesRef.current.length > 0) {
+        const sortedByTime = [...processedNotesRef.current].sort((a, b) => a.startTime - b.startTime);
+        const earliestNote = sortedByTime[0];
+        const latestNote = sortedByTime[sortedByTime.length - 1];
+        
+        console.log("Earliest note starts at (ms):", earliestNote.startTime);
+        console.log("Latest note starts at (ms):", latestNote.startTime);
+        console.log("MIDI time range (ms):", latestNote.startTime - earliestNote.startTime);
+      }
     }
   }, [midiData]);
   
@@ -66,6 +82,8 @@ const NotesVisualizer = memo(function NotesVisualizer({
       }
       
       const time = currentTimeRef.current;
+      // console.log("Animation loop - Current time:", time);
+      
       const positions = keyPositionsRef.current;
       const notes = processedNotesRef.current;
       
@@ -107,11 +125,16 @@ const NotesVisualizer = memo(function NotesVisualizer({
   function checkActiveNotes(processedNotes, currentTime, keyPositions, canvasHeight) {
     if (!processedNotes || Object.keys(keyPositions).length === 0) return;
     
-    // Find currently active notes
+    // Apply timing offset for consistent synchronization
+    const adjustedTime = currentTime + timingOffsetRef.current;
+    
+    // Find currently active notes with precise time comparison
     const currentlyActive = new Set();
+    // console.log("Checking active notes - Current time:", currentTime, "Adjusted time:", adjustedTime);
     
     processedNotes.forEach(note => {
-      if (note.startTime <= currentTime && note.endTime >= currentTime) {
+      // More precise comparison with consistent offset
+      if (note.startTime <= adjustedTime && note.endTime >= adjustedTime) {
         currentlyActive.add(note.note);
         
         // If this note wasn't active before, create particles
@@ -163,6 +186,7 @@ const NotesVisualizer = memo(function NotesVisualizer({
   // Process MIDI data into a suitable format for visualization
   function processMidiData(midiData) {
     // Extract all note-on and note-off events
+    console.log("Processing MIDI data - Tracks:", midiData.track.length);
     const allEvents = midiData.track.flatMap(track => 
       track.event.filter(event => event.type === 9 || event.type === 8)
     );
@@ -170,6 +194,11 @@ const NotesVisualizer = memo(function NotesVisualizer({
     // Calculate absolute time for each event
     let absoluteEvents = [];
     let currentAbsoluteTime = 0;
+    
+    // Log the first few delta times to help diagnose early note issues
+    if (allEvents.length > 0) {
+      console.log("First 5 delta times (ms):", allEvents.slice(0, 5).map(e => e.deltaTime));
+    }
     
     allEvents.forEach(event => {
       currentAbsoluteTime += event.deltaTime;
@@ -214,6 +243,19 @@ const NotesVisualizer = memo(function NotesVisualizer({
       notes.push(note);
     });
     
+    console.log("Processed MIDI data - Notes:", notes.length);
+    
+    // If there are notes, log the first few to check timing
+    if (notes.length > 0) {
+      const sortedNotes = [...notes].sort((a, b) => a.startTime - b.startTime);
+      console.log("First 5 notes timing (ms):", sortedNotes.slice(0, 5).map(n => ({ 
+        note: n.note, 
+        start: n.startTime, 
+        end: n.endTime,
+        duration: n.endTime - n.startTime
+      })));
+    }
+    
     return notes;
   }
   
@@ -236,14 +278,26 @@ const NotesVisualizer = memo(function NotesVisualizer({
     const timeWindow = lookaheadTimeRef.current;
     const pixelsPerMs = height / timeWindow;
     
+    // Apply timing offset for consistent synchronization
+    const adjustedTime = currentTime + timingOffsetRef.current;
+    
+    // console.log("Drawing notes - Current time (ms):", currentTime, "Adjusted time:", adjustedTime);
+    
     // Sort notes by start time to handle overlaps correctly
     const sortedNotes = [...notes].sort((a, b) => a.startTime - b.startTime);
     
+    // Count notes that are shown and skipped for debugging
+    let shownNotes = 0;
+    let skippedNotes = 0;
+    
     sortedNotes.forEach(note => {
-      // Only draw notes within our time window (with some margin)
-      if (note.endTime < currentTime - 500 || note.startTime > currentTime + timeWindow) {
+      // Use a wider window to avoid missing notes (2000ms in the past, lookahead in the future)
+      if (note.endTime < adjustedTime - 2000 || note.startTime > adjustedTime + timeWindow) {
+        skippedNotes++;
         return;
       }
+      
+      shownNotes++;
       
       // Get position from key positions map
       const keyInfo = keyPositions[note.note];
@@ -254,17 +308,15 @@ const NotesVisualizer = memo(function NotesVisualizer({
       const x = keyInfo.x;
       const width = keyInfo.width * 0.85; // Slightly narrower than the actual key
       
-      // Precise alignment: 
-      // - When note.startTime === currentTime, startY should be exactly height (bottom of canvas)
-      // - When note.startTime === currentTime + timeWindow, startY should be 0 (top of canvas)
-      const timeToPlay = note.startTime - currentTime;
+      // Calculate position using adjusted time
+      const timeToPlay = note.startTime - adjustedTime;
       const startY = height - (timeToPlay * pixelsPerMs);
-      const endY = height - ((note.endTime - currentTime) * pixelsPerMs);
+      const endY = height - ((note.endTime - adjustedTime) * pixelsPerMs);
       
       const noteHeight = Math.max(startY - endY, 5); // Ensure a minimum height
       
-      // Determine if note is currently being played
-      const isActive = note.startTime <= currentTime && note.endTime >= currentTime;
+      // Determine if note is currently being played with adjusted time
+      const isActive = note.startTime <= adjustedTime && note.endTime >= adjustedTime;
       
       // Draw the note
       ctx.beginPath();
@@ -321,6 +373,9 @@ const NotesVisualizer = memo(function NotesVisualizer({
         }
       }
     });
+    
+    // Log how many notes are being shown vs skipped
+    // console.log(`Notes rendered: ${shownNotes}, skipped: ${skippedNotes}`);
   }
   
   // Create particles for a newly activated note
