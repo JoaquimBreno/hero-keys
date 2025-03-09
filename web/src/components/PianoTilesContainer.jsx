@@ -1,4 +1,3 @@
-// PianoVisualizationComponent.jsx
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import StylishPiano from './StylishPiano';
 import NotesVisualizer from './NotesVisualizer';
@@ -9,10 +8,28 @@ export default function PianoTilesContainer({ midiData, fileName, audioData }) {
   const [currentPlaybackTime, setCurrentPlaybackTime] = useState(0);
   const [keyPositions, setKeyPositions] = useState({});
   const containerRef = useRef(null);
+  const timeUpdateRef = useRef(null);
   
-  // Handle time updates from the audio player
+  // Handle time updates from the audio player - use debounce to reduce updates
   const handleTimeUpdate = useCallback((timeMs) => {
-    setCurrentPlaybackTime(timeMs);
+    // Cancel previous update if it exists
+    if (timeUpdateRef.current) {
+      cancelAnimationFrame(timeUpdateRef.current);
+    }
+    
+    // Schedule the update using requestAnimationFrame for better performance
+    timeUpdateRef.current = requestAnimationFrame(() => {
+      setCurrentPlaybackTime(timeMs);
+    });
+  }, []);
+  
+  // Clean up animation frame on unmount
+  useEffect(() => {
+    return () => {
+      if (timeUpdateRef.current) {
+        cancelAnimationFrame(timeUpdateRef.current);
+      }
+    };
   }, []);
   
   // Handle note plays from the piano

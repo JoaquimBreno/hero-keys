@@ -4,9 +4,12 @@ import styles from './AudioPlayer.module.css';
 
 export default function AudioPlayer({ audioData, onTimeUpdate, fileName }) {
   const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
+  const [displayTime, setDisplayTime] = useState(0); // For display purposes only
   const [duration, setDuration] = useState(0);
   const audioRef = useRef(null);
+  const currentTimeRef = useRef(0); // Store current time in ref to avoid re-renders
+  const seekingRef = useRef(false); // Track when user is manually seeking
+  const animationFrameRef = useRef(null);
   
   // Initialize audio with the provided data
   useEffect(() => {
@@ -30,6 +33,31 @@ export default function AudioPlayer({ audioData, onTimeUpdate, fileName }) {
     }
   };
   
+  // Set up a more efficient animation loop for time updates
+  useEffect(() => {
+    const updateTime = () => {
+      if (audioRef.current && isPlaying && !seekingRef.current) {
+        const time = audioRef.current.currentTime;
+        currentTimeRef.current = time;
+        setDisplayTime(time); // Update display time (less frequent)
+        
+        // Report current time to parent component
+        if (onTimeUpdate) {
+          onTimeUpdate(time * 1000); // Convert to milliseconds for MIDI sync
+        }
+      }
+      animationFrameRef.current = requestAnimationFrame(updateTime);
+    };
+    
+    animationFrameRef.current = requestAnimationFrame(updateTime);
+    
+    return () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+    };
+  }, [isPlaying, onTimeUpdate]);
+  
   // Handle play/pause
   const togglePlay = () => {
     if (audioRef.current) {
@@ -42,34 +70,29 @@ export default function AudioPlayer({ audioData, onTimeUpdate, fileName }) {
     }
   };
   
-  // Handle time update
-  const handleTimeUpdate = () => {
-    if (audioRef.current) {
-      const time = audioRef.current.currentTime;
-      setCurrentTime(time);
-      
-      // Report current time to parent component
-      if (onTimeUpdate) {
-        onTimeUpdate(time * 1000); // Convert to milliseconds for MIDI sync
-        
-        // Log current time for debugging
-        console.log('Current playback time (ms):', time * 1000);
-      }
-    }
-  };
+  // No longer need timeUpdate event handler
+  // The animation frame handles this more efficiently
   
-  // Handle seek
+  // Handle seek - fixed to prevent infinite loop
   const handleSeek = (e) => {
+    seekingRef.current = true; // Set seeking flag to prevent update loop
+    
     const seekTime = parseFloat(e.target.value);
-    setCurrentTime(seekTime);
+    currentTimeRef.current = seekTime;
+    setDisplayTime(seekTime);
     
     if (audioRef.current) {
       audioRef.current.currentTime = seekTime;
-      
+    }
+    
+    // Schedule the seeking flag to be released
+    setTimeout(() => {
+      seekingRef.current = false;
+      // Update one more time after seeking ends
       if (onTimeUpdate) {
         onTimeUpdate(seekTime * 1000);
       }
-    }
+    }, 50);
   };
   
   // Format time as mm:ss
@@ -83,7 +106,6 @@ export default function AudioPlayer({ audioData, onTimeUpdate, fileName }) {
     <div className={styles.audioPlayer}>
       <audio
         ref={audioRef}
-        onTimeUpdate={handleTimeUpdate}
         onLoadedMetadata={handleMetadataLoaded}
         onEnded={() => setIsPlaying(false)}
       />
@@ -102,7 +124,7 @@ export default function AudioPlayer({ audioData, onTimeUpdate, fileName }) {
         </button>
         
         <div className={styles.timeInfo}>
-          <span className={styles.currentTime}>{formatTime(currentTime)}</span>
+          <span className={styles.currentTime}>{formatTime(displayTime)}</span>
           
           <input
             type="range"
@@ -110,7 +132,7 @@ export default function AudioPlayer({ audioData, onTimeUpdate, fileName }) {
             min="0"
             max={duration || 0}
             step="0.01"
-            value={currentTime}
+            value={displayTime}
             onChange={handleSeek}
           />
           

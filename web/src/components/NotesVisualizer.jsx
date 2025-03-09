@@ -1,11 +1,31 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, memo } from 'react';
 import styles from './NotesVisualizer.module.css';
 
-export default function NotesVisualizer({ midiData, currentTime = 0, keyPositions = {} }) {
+// Use memo to prevent unnecessary re-renders
+const NotesVisualizer = memo(function NotesVisualizer({ midiData, currentTime = 0, keyPositions = {} }) {
   const canvasRef = useRef(null);
   const particlesRef = useRef([]);
   const activeNotesRef = useRef(new Set());
   const animationRef = useRef(null);
+  const processedNotesRef = useRef(null); // Store processed notes in a ref
+  const currentTimeRef = useRef(currentTime); // Store current time in ref
+  const keyPositionsRef = useRef(keyPositions); // Store key positions in ref
+  
+  // Update refs when props change without triggering renders
+  useEffect(() => {
+    currentTimeRef.current = currentTime;
+  }, [currentTime]);
+  
+  useEffect(() => {
+    keyPositionsRef.current = keyPositions;
+  }, [keyPositions]);
+  
+  // Process MIDI data only when it changes
+  useEffect(() => {
+    if (midiData) {
+      processedNotesRef.current = processMidiData(midiData);
+    }
+  }, [midiData]);
   
   useEffect(() => {
     if (!midiData || !canvasRef.current) return;
@@ -25,24 +45,33 @@ export default function NotesVisualizer({ midiData, currentTime = 0, keyPosition
     resizeCanvas();
     window.addEventListener('resize', resizeCanvas);
     
-    // Process MIDI data into note events with absolute timing
-    const processedNotes = processMidiData(midiData);
-    
     // Set up animation loop
     const animate = () => {
+      const time = currentTimeRef.current;
+      const positions = keyPositionsRef.current;
+      const notes = processedNotesRef.current;
+      
+      if (!notes) {
+        animationRef.current = requestAnimationFrame(animate);
+        return;
+      }
+      
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       
       const canvasWidth = canvas.width / window.devicePixelRatio;
       const canvasHeight = canvas.height / window.devicePixelRatio;
       
       // Draw grid lines aligned with piano keys
-      drawPianoAlignedGrid(ctx, canvasWidth, canvasHeight, keyPositions);
+      drawPianoAlignedGrid(ctx, canvasWidth, canvasHeight, positions);
       
       // Draw notes
-      drawNotes(ctx, processedNotes, currentTime, canvasWidth, canvasHeight);
+      drawNotes(ctx, notes, time, canvasWidth, canvasHeight, positions);
       
-      // Draw particles
+      // Update particles
       updateAndDrawParticles(ctx);
+      
+      // Check for newly active notes
+      checkActiveNotes(notes, time, positions, canvasHeight);
       
       animationRef.current = requestAnimationFrame(animate);
     };
@@ -53,17 +82,11 @@ export default function NotesVisualizer({ midiData, currentTime = 0, keyPosition
       cancelAnimationFrame(animationRef.current);
       window.removeEventListener('resize', resizeCanvas);
     };
-  }, [midiData, keyPositions, currentTime]); // Add currentTime dependency for smoother scrolling
+  }, [midiData]); // Only depends on midiData changing
   
-  useEffect(() => {
-    // Check for newly active notes to generate particles
-    if (!midiData || Object.keys(keyPositions).length === 0) return;
-    
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    
-    const canvasHeight = canvas.getBoundingClientRect().height;
-    const processedNotes = processMidiData(midiData);
+  // Check for active notes and create particles - integrated into animation loop
+  function checkActiveNotes(processedNotes, currentTime, keyPositions, canvasHeight) {
+    if (!processedNotes || Object.keys(keyPositions).length === 0) return;
     
     // Find currently active notes
     const currentlyActive = new Set();
@@ -81,7 +104,7 @@ export default function NotesVisualizer({ midiData, currentTime = 0, keyPosition
     
     // Update the ref for the next check
     activeNotesRef.current = currentlyActive;
-  }, [midiData, currentTime, keyPositions]);
+  }
   
   // Draw grid lines aligned with piano keys
   function drawPianoAlignedGrid(ctx, width, height, keyPositions) {
@@ -190,7 +213,7 @@ export default function NotesVisualizer({ midiData, currentTime = 0, keyPosition
   }
   
   // Draw all visible notes
-  function drawNotes(ctx, notes, currentTime, width, height) {
+  function drawNotes(ctx, notes, currentTime, width, height, keyPositions) {
     const timeWindow = 5000; // How many milliseconds of notes to show ahead
     const pixelsPerMs = height / timeWindow;
     
@@ -343,4 +366,6 @@ export default function NotesVisualizer({ midiData, currentTime = 0, keyPosition
       <canvas ref={canvasRef} className={styles.visualizerCanvas} />
     </div>
   );
-}
+});
+
+export default NotesVisualizer;
