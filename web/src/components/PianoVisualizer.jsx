@@ -4,6 +4,7 @@ import Script from 'next/script';
 import styles from './PianoVisualizer.module.css';
 import MIDIParser from 'midi-parser-js';
 import PianoTilesContainer from './PianoTilesContainer';
+import { processMIDIFile } from '@/lib/simplify';
 
 export default function PianoVisualizer() {
   const dropZoneRef = useRef(null);
@@ -72,13 +73,14 @@ export default function PianoVisualizer() {
               
               // Make sure MIDIParser is available
               if (typeof MIDIParser !== 'undefined') {
-                const midiFile = MIDIParser.parse(byteArray);
+                let midiFile = MIDIParser.parse(byteArray);
                 console.log('MIDI file parsed:', midiFile);
                 
                 setIsTransitioning(true);
                 // For now, just log the tracks
                 if (midiFile && midiFile.track) {
                   setTimeout(() => {
+                    midiFile = processMIDIFile(midiFile);
                     setMidiLoaded(midiFile);
                     console.log(`Loaded ${midiFile.track.length} tracks`);
                     // End transition after a delay
@@ -158,7 +160,7 @@ export default function PianoVisualizer() {
     const loadMockAudio = async () => {
       try {
         // Caminho para o arquivo de áudio na pasta pública
-        const audioUrl = 'teste.mp3'; // Ajuste o caminho conforme necessário
+        const audioUrl = 'soltaacarta.mp3'; // Ajuste o caminho conforme necessário
         
         // Buscar o arquivo
         const response = await fetch(audioUrl);
@@ -170,7 +172,7 @@ export default function PianoVisualizer() {
         const blob = await response.blob();
         
         // Criar um objeto File a partir do blob
-        const file = new File([blob], 'teste.mp3', { type: 'audio/mpeg' });
+        const file = new File([blob], 'soltaacarta.mp3', { type: 'audio/mpeg' });
         
         // Armazenar o arquivo
         setAudioFile(file);

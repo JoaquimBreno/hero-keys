@@ -58,6 +58,7 @@ export default function PianoTilesContainer({ midiData, fileName, audioData }) {
             midiData={midiData}
             currentTime={currentPlaybackTime}
             keyPositions={keyPositions}
+            timeOffset={0}
           />
         </div>
         
