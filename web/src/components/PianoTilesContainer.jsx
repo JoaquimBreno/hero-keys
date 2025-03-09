@@ -1,5 +1,5 @@
 // PianoVisualizationComponent.jsx
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import StylishPiano from './StylishPiano';
 import NotesVisualizer from './NotesVisualizer';
 import AudioPlayer from './AudioPlayer';
@@ -7,7 +7,9 @@ import styles from './PianoTiles.module.css';
 
 export default function PianoTilesContainer({ midiData, fileName, audioData }) {
   const [currentPlaybackTime, setCurrentPlaybackTime] = useState(0);
-  console.log('audioData:', audioData); 
+  const [keyPositions, setKeyPositions] = useState({});
+  const containerRef = useRef(null);
+  
   // Handle time updates from the audio player
   const handleTimeUpdate = useCallback((timeMs) => {
     setCurrentPlaybackTime(timeMs);
@@ -17,6 +19,11 @@ export default function PianoTilesContainer({ midiData, fileName, audioData }) {
   const handleNotePlay = useCallback((midiEvent) => {
     console.log('Note played:', midiEvent);
     // You could add sound synthesis here
+  }, []);
+  
+  // Handle key position updates from the piano component
+  const handleKeyPositionsUpdate = useCallback((positions) => {
+    setKeyPositions(positions);
   }, []);
   
   return (
@@ -33,6 +40,7 @@ export default function PianoTilesContainer({ midiData, fileName, audioData }) {
           <NotesVisualizer 
             midiData={midiData}
             currentTime={currentPlaybackTime}
+            keyPositions={keyPositions}
           />
         </div>
         
@@ -42,6 +50,7 @@ export default function PianoTilesContainer({ midiData, fileName, audioData }) {
             midiData={midiData}
             currentTime={currentPlaybackTime}
             onNotePlay={handleNotePlay}
+            onKeyPositionsUpdate={handleKeyPositionsUpdate}
           />
         </div>
         

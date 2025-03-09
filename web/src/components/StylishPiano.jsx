@@ -1,15 +1,72 @@
 // StylishPiano.jsx
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import styles from './StylishPiano.module.css';
 
-export default function StylishPiano({ midiData, currentTime = 0, onNotePlay }) {
+export default function StylishPiano({ 
+  midiData, 
+  currentTime = 0, 
+  onNotePlay,
+  onKeyPositionsUpdate 
+}) {
   const [pressedKeys, setPressedKeys] = useState([]);
   const [isDragging, setIsDragging] = useState(false);
   const [lastPlayedNote, setLastPlayedNote] = useState(null);
   
+  // Refs for key elements
+  const whiteKeysRef = useRef({});
+  const blackKeysRef = useRef({});
+  const containerRef = useRef(null);
+  
   // Piano configuration - 5 octaves
   const startNote = 36; // C2
   const keyCount = 60; // 5 octaves (12 notes per octave * 5)
+  
+  // Measure key positions and report them to parent component
+  useEffect(() => {
+    if (!containerRef.current || !onKeyPositionsUpdate) return;
+    
+    const measureKeyPositions = () => {
+      // Get container position for relative calculations
+      const containerRect = containerRef.current.getBoundingClientRect();
+      const positions = {};
+      
+      // Measure white keys
+      Object.entries(whiteKeysRef.current).forEach(([midiNote, element]) => {
+        if (element) {
+          const rect = element.getBoundingClientRect();
+          positions[midiNote] = {
+            x: rect.left + rect.width / 2 - containerRect.left,
+            width: rect.width,
+            isBlack: false
+          };
+        }
+      });
+      
+      // Measure black keys
+      Object.entries(blackKeysRef.current).forEach(([midiNote, element]) => {
+        if (element) {
+          const rect = element.getBoundingClientRect();
+          positions[midiNote] = {
+            x: rect.left + rect.width / 2 - containerRect.left,
+            width: rect.width,
+            isBlack: true
+          };
+        }
+      });
+      
+      onKeyPositionsUpdate(positions);
+    };
+    
+    // Initial measurement after rendering
+    setTimeout(measureKeyPositions, 100);
+    
+    // Remeasure on window resize
+    window.addEventListener('resize', measureKeyPositions);
+    
+    return () => {
+      window.removeEventListener('resize', measureKeyPositions);
+    };
+  }, [onKeyPositionsUpdate]);
   
   // Track active notes from MIDI data based on current playback time
   useEffect(() => {
@@ -158,13 +215,14 @@ export default function StylishPiano({ midiData, currentTime = 0, onNotePlay }) 
   }
 
   return (
-    <div className={styles.pianoContainer}>
+    <div className={styles.pianoContainer} ref={containerRef}>
       <div className={styles.keyboard}>
         {/* White keys */}
         <div className={styles.whiteKeysContainer}>
           {whiteNotes.map((note) => (
             <div 
               key={note.midiNote}
+              ref={el => whiteKeysRef.current[note.midiNote] = el}
               className={`${styles.whiteKey} ${note.isActive ? styles.activeNote : ''}`}
               data-note={note.midiNote}
               onMouseDown={() => handleMouseDown(note.midiNote)}
@@ -183,6 +241,7 @@ export default function StylishPiano({ midiData, currentTime = 0, onNotePlay }) 
             return (
               <div
                 key={note.midiNote}
+                ref={el => blackKeysRef.current[note.midiNote] = el}
                 className={`${styles.blackKey} ${note.isActive ? styles.activeNote : ''}`}
                 style={{ left: `${position}%` }}
                 data-note={note.midiNote}
@@ -254,7 +313,7 @@ function getBlackKeyPosition(midiNote) {
   }
   
   if(octavesFromStart > 0){
-    octavesFromStart = octavesFromStart*0.97
+    octavesFromStart = octavesFromStart * 0.97;
   }
   // Calculate the total number of white keys before this note
   const totalWhiteKeysBefore = (octavesFromStart * whiteKeysPerOctave) + whiteKeysBefore;
