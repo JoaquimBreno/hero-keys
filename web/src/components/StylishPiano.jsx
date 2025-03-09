@@ -11,6 +11,7 @@ export default function StylishPiano({
   const [pressedKeys, setPressedKeys] = useState([]);
   const [isDragging, setIsDragging] = useState(false);
   const [lastPlayedNote, setLastPlayedNote] = useState(null);
+  const [processedMidiData, setProcessedMidiData] = useState(null);
   
   // Refs for key elements
   const whiteKeysRef = useRef({});
@@ -21,6 +22,80 @@ export default function StylishPiano({
   const startNote = 36; // C2
   const keyCount = 60; // 5 octaves (12 notes per octave * 5)
   
+  // Process MIDI data when it changes (similar to NotesVisualizer)
+  useEffect(() => {
+    if (!midiData) return;
+    
+    // Extract all note-on and note-off events
+    const allEvents = midiData.track.flatMap(track => 
+      track.event.filter(event => event.type === 9 || event.type === 8)
+    );
+    
+    // Calculate absolute time for each event
+    let absoluteEvents = [];
+    let currentAbsoluteTime = 0;
+    
+    allEvents.forEach(event => {
+      currentAbsoluteTime += event.deltaTime;
+      absoluteEvents.push({
+        ...event,
+        absoluteTime: currentAbsoluteTime,
+        isNoteOn: event.type === 9 && event.data[1] > 0,
+        note: event.data[0],
+        velocity: event.data[1]
+      });
+    });
+    
+    // Match note-on with note-off events to create note objects
+    const notes = [];
+    const activeNotes = {};
+    
+    absoluteEvents.forEach(event => {
+      const noteId = event.note;
+      
+      if (event.isNoteOn) {
+        // Start of note
+        activeNotes[noteId] = {
+          note: noteId,
+          velocity: event.velocity,
+          startTime: event.absoluteTime,
+          endTime: null
+        };
+      } else {
+        // End of note
+        if (activeNotes[noteId]) {
+          const note = activeNotes[noteId];
+          note.endTime = event.absoluteTime;
+          notes.push(note);
+          delete activeNotes[noteId];
+        }
+      }
+    });
+    
+    // Add any notes that didn't have a note-off event
+    Object.values(activeNotes).forEach(note => {
+      note.endTime = note.startTime + 1000; // Default duration
+      notes.push(note);
+    });
+    
+    setProcessedMidiData(notes);
+  }, [midiData]);
+  
+  // Update active keys based on current time
+  useEffect(() => {
+    if (!processedMidiData) return;
+    
+    // Apply the same time offset as NotesVisualizer (-110ms)
+    const adjustedCurrentTime = currentTime - 110;
+    
+    // Find notes that are active at the current time
+    const active = processedMidiData.filter(note => 
+      note.startTime <= adjustedCurrentTime && note.endTime >= adjustedCurrentTime
+    ).map(note => note.note);
+    
+    setPressedKeys(active);
+  }, [processedMidiData, currentTime]);
+
   // Measure key positions and report them to parent component
   useEffect(() => {
     if (!containerRef.current || !onKeyPositionsUpdate) return;
@@ -67,52 +142,6 @@ export default function StylishPiano({
       window.removeEventListener('resize', measureKeyPositions);
     };
   }, [onKeyPositionsUpdate]);
-  
-  // Track active notes from MIDI data based on current playback time
-  useEffect(() => {
-    if (!midiData) return;
-    // Extract all note events from all tracks
-    const allNoteEvents = midiData.track.flatMap(track => 
-      track.event.filter(event => event.type === 9 || event.type === 8)
-    );
-    
-    // Calculate absolute time for each event
-    let absoluteEvents = [];
-    let currentAbsoluteTime = 0;
-    
-    allNoteEvents.forEach(event => {
-      currentAbsoluteTime += event.deltaTime;
-      absoluteEvents.push({
-        ...event,
-        absoluteTime: currentAbsoluteTime
-      });
-    });
-    
-    // Find active notes at current time
-    const activeNotes = [];
-    const noteState = {};
-    
-    for (const event of absoluteEvents) {
-      if (event.absoluteTime > currentTime) break;
-      
-      const noteNumber = event.data[0];
-      
-      if (event.type === 9 && event.data[1] > 0) {
-        // Note on
-        noteState[noteNumber] = true;
-      } else {
-        // Note off
-        noteState[noteNumber] = false;
-      }
-    }
-    
-    // Collect all notes that are still on
-    Object.entries(noteState).forEach(([note, isOn]) => {
-      if (isOn) activeNotes.push(parseInt(note));
-    });
-    
-    setPressedKeys(activeNotes);
-  }, [midiData, currentTime]);
   
   // Mouse interaction handlers
   const handleMouseDown = useCallback((midiNote) => {
@@ -313,7 +342,7 @@ function getBlackKeyPosition(midiNote) {
   }
   
   if(octavesFromStart > 0){
-    octavesFromStart = octavesFromStart * 0.97;
+    octavesFromStart = octavesFromStart * 1;
   }
   // Calculate the total number of white keys before this note
   const totalWhiteKeysBefore = (octavesFromStart * whiteKeysPerOctave) + whiteKeysBefore;

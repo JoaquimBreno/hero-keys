@@ -13,7 +13,7 @@ const NotesVisualizer = memo(function NotesVisualizer({ midiData, currentTime = 
   
   // Update refs when props change without triggering renders
   useEffect(() => {
-    currentTimeRef.current = currentTime;
+    currentTimeRef.current = currentTime - 110;
   }, [currentTime]);
   
   useEffect(() => {
@@ -214,7 +214,7 @@ const NotesVisualizer = memo(function NotesVisualizer({ midiData, currentTime = 
   
   // Draw all visible notes
   function drawNotes(ctx, notes, currentTime, width, height, keyPositions) {
-    const timeWindow = 5000; // How many milliseconds of notes to show ahead
+    const timeWindow = 10000; // How many milliseconds of notes to show ahead
     const pixelsPerMs = height / timeWindow;
     
     // Sort notes by start time to handle overlaps correctly
