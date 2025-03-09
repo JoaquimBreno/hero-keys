@@ -75,7 +75,7 @@
     background-blend-mode: normal, overlay, overlay, overlay;
     /* Creating stronger beveled edges */
     border-left: 1px solid rgba(0, 0, 0, 0.9);
-    border-right: 1px solid rgba(0, 0, 0, 0.9);
+    border-right: px solid rgba(0, 0, 0, 0.9);
     border-bottom: 2px solid rgba(0, 0, 0, 0.9);
     /* 3D effect with additional box shadows */
     box-shadow: 
