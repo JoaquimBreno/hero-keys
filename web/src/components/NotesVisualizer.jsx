@@ -2,7 +2,14 @@ import React, { useEffect, useRef, memo } from 'react';
 import styles from './NotesVisualizer.module.css';
 
 // Use memo to prevent unnecessary re-renders
-const NotesVisualizer = memo(function NotesVisualizer({ midiData, currentTime = 0, keyPositions = {} }) {
+const NotesVisualizer = memo(function NotesVisualizer({ 
+  midiData, 
+  currentTime = 0, 
+  keyPositions = {},
+  timeOffset = 0, // Add configurable time offset instead of hardcoded value
+  lookaheadTime = 1000, // Reduced from 10000ms to 3000ms (3 seconds ahead)
+  verticalOffset = 0 // Fine-tune vertical position of notes
+}) {
   const canvasRef = useRef(null);
   const particlesRef = useRef([]);
   const activeNotesRef = useRef(new Set());
@@ -10,15 +17,21 @@ const NotesVisualizer = memo(function NotesVisualizer({ midiData, currentTime = 
   const processedNotesRef = useRef(null); // Store processed notes in a ref
   const currentTimeRef = useRef(currentTime); // Store current time in ref
   const keyPositionsRef = useRef(keyPositions); // Store key positions in ref
+  const lastFrameTimeRef = useRef(0); // Track last frame time to ensure consistent timing
+  const lookaheadTimeRef = useRef(lookaheadTime); // Store lookahead time in ref
   
   // Update refs when props change without triggering renders
   useEffect(() => {
-    currentTimeRef.current = currentTime - 110;
-  }, [currentTime]);
+    currentTimeRef.current = currentTime + timeOffset;
+  }, [currentTime, timeOffset]);
   
   useEffect(() => {
     keyPositionsRef.current = keyPositions;
   }, [keyPositions]);
+  
+  useEffect(() => {
+    lookaheadTimeRef.current = lookaheadTime;
+  }, [lookaheadTime]);
   
   // Process MIDI data only when it changes
   useEffect(() => {
@@ -45,8 +58,13 @@ const NotesVisualizer = memo(function NotesVisualizer({ midiData, currentTime = 
     resizeCanvas();
     window.addEventListener('resize', resizeCanvas);
     
-    // Set up animation loop
-    const animate = () => {
+    // Set up animation loop with precise timing
+    const animate = (timestamp) => {
+      // Use the actual timestamp to ensure consistent animation speed
+      if (!lastFrameTimeRef.current) {
+        lastFrameTimeRef.current = timestamp;
+      }
+      
       const time = currentTimeRef.current;
       const positions = keyPositionsRef.current;
       const notes = processedNotesRef.current;
@@ -73,10 +91,11 @@ const NotesVisualizer = memo(function NotesVisualizer({ midiData, currentTime = 
       // Check for newly active notes
       checkActiveNotes(notes, time, positions, canvasHeight);
       
+      lastFrameTimeRef.current = timestamp;
       animationRef.current = requestAnimationFrame(animate);
     };
     
-    animate();
+    animationRef.current = requestAnimationFrame(animate);
     
     return () => {
       cancelAnimationFrame(animationRef.current);
@@ -214,14 +233,14 @@ const NotesVisualizer = memo(function NotesVisualizer({ midiData, currentTime = 
   
   // Draw all visible notes
   function drawNotes(ctx, notes, currentTime, width, height, keyPositions) {
-    const timeWindow = 10000; // How many milliseconds of notes to show ahead
+    const timeWindow = lookaheadTimeRef.current;
     const pixelsPerMs = height / timeWindow;
     
     // Sort notes by start time to handle overlaps correctly
     const sortedNotes = [...notes].sort((a, b) => a.startTime - b.startTime);
     
     sortedNotes.forEach(note => {
-      // Only draw notes within our time window
+      // Only draw notes within our time window (with some margin)
       if (note.endTime < currentTime - 500 || note.startTime > currentTime + timeWindow) {
         return;
       }
@@ -235,11 +254,13 @@ const NotesVisualizer = memo(function NotesVisualizer({ midiData, currentTime = 
       const x = keyInfo.x;
       const width = keyInfo.width * 0.85; // Slightly narrower than the actual key
       
-      // Calculate y position based on time
-      // Notes that are about to be played are at the bottom (higher y)
-      // The position will continuously update based on currentTime
-      const startY = height - ((note.startTime - currentTime) * pixelsPerMs);
+      // Precise alignment: 
+      // - When note.startTime === currentTime, startY should be exactly height (bottom of canvas)
+      // - When note.startTime === currentTime + timeWindow, startY should be 0 (top of canvas)
+      const timeToPlay = note.startTime - currentTime;
+      const startY = height - (timeToPlay * pixelsPerMs);
       const endY = height - ((note.endTime - currentTime) * pixelsPerMs);
+      
       const noteHeight = Math.max(startY - endY, 5); // Ensure a minimum height
       
       // Determine if note is currently being played

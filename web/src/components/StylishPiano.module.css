@@ -65,6 +65,24 @@
       0 3px 5px rgba(0, 0, 0, 0.2),
       inset 0 -1px 0 rgba(255, 255, 255, 0.08);
     cursor: pointer;
+    /* Improved beveled effect */
+    border: none;
+    background-image: 
+      linear-gradient(to bottom, #303030, #1a1a1a),
+      linear-gradient(to right, rgba(255, 255, 255, 0.25) 0%, rgba(0, 0, 0, 0) 5px), /* Left highlight */
+      linear-gradient(to left, rgba(255, 255, 255, 0.1) 0%, rgba(0, 0, 0, 0) 5px), /* Right highlight */
+      linear-gradient(to bottom, rgba(255, 255, 255, 0.3) 0%, rgba(0, 0, 0, 0) 3px); /* Top highlight */
+    background-blend-mode: normal, overlay, overlay, overlay;
+    /* Creating stronger beveled edges */
+    border-left: 1px solid rgba(0, 0, 0, 0.9);
+    border-right: 1px solid rgba(0, 0, 0, 0.9);
+    border-bottom: 2px solid rgba(0, 0, 0, 0.9);
+    /* 3D effect with additional box shadows */
+    box-shadow: 
+      0 3px 5px rgba(0, 0, 0, 0.4),
+      inset 2px 0 3px rgba(255, 255, 255, 0.2), /* Right inner highlight */
+      inset -2px 0 3px rgba(0, 0, 0, 0.4), /* Left inner shadow */
+      inset 0 2px 3px rgba(255, 255, 255, 0.25); /* Top inner highlight */
   }
   
   .noteName {
@@ -85,10 +103,23 @@
   
   .blackKey.activeNote {
     background: linear-gradient(180deg, #00c6d4 0%, #00d9e8 100%);
+    transform: translateY(2px);
+    /* Enhanced active state beveled effect */
     box-shadow: 
       0 0 15px rgba(0, 217, 232, 0.5),
-      0 0 7px rgba(0, 217, 232, 0.7);
-    transform: translateY(2px);
+      0 0 7px rgba(0, 217, 232, 0.7),
+      inset 2px 0 3px rgba(255, 255, 255, 0.4), /* Enhanced right highlight */
+      inset -2px 0 3px rgba(0, 0, 0, 0.3), /* Enhanced left shadow */
+      inset 0 2px 3px rgba(255, 255, 255, 0.4); /* Enhanced top highlight */
+    border-left: 2px solid rgba(0, 0, 0, 0.6);
+    border-right: 2px solid rgba(0, 0, 0, 0.6);
+    border-bottom: 2px solid rgba(0, 0, 0, 0.7);
+    background-image: 
+      linear-gradient(180deg, #00c6d4 0%, #00d9e8 100%),
+      linear-gradient(to right, rgba(255, 255, 255, 0.4) 0%, rgba(0, 0, 0, 0) 8px), /* Enhanced left highlight */
+      linear-gradient(to left, rgba(255, 255, 255, 0.2) 0%, rgba(0, 0, 0, 0) 8px), /* Enhanced right highlight */
+      linear-gradient(to bottom, rgba(255, 255, 255, 0.5) 0%, rgba(0, 0, 0, 0) 5px); /* Enhanced top highlight */
+    background-blend-mode: normal, overlay, overlay, overlay;
   }
   
   .whiteKey.activeNote .noteName {
