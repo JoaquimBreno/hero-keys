@@ -7,7 +7,7 @@ const NotesVisualizer = memo(function NotesVisualizer({
   currentTime = 0, 
   keyPositions = {},
   timeOffset = 0, // Add configurable time offset instead of hardcoded value
-  lookaheadTime = 1000, // Reduced from 10000ms to 3000ms (3 seconds ahead)
+  lookaheadTime = 2000, // Reduced from 10000ms to 3000ms (3 seconds ahead)
   verticalOffset = 0 // Fine-tune vertical position of notes
 }) {
   const canvasRef = useRef(null);
