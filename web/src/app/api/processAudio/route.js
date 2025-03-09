@@ -4,7 +4,7 @@ import Moises from 'moises/sdk';
 import fs from 'fs';
 import path from 'path';
 
-const moises = new Moises({ apiKey: "" });
+const moises = new Moises({ apiKey: "8f71aad7-2ca6-412f-bba2-8bdf0ee02920" });
 
 export async function POST(request) {
   console.log('processAudio API called');
@@ -42,6 +42,9 @@ export async function POST(request) {
 
     // Processa o arquivo com a API Moises
     await moises.processFile("piano_separation", "temp/song.mp3", "temp");
+    await moises.processFile("chords_piano", "temp/piano_output.mp3", "temp");
+
+    // Converter para Midi
 
     console.log('Arquivo processado e salvo com sucesso.');
     return NextResponse.json({ success: true }, { status: 200 });
