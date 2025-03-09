@@ -6,7 +6,8 @@ export default function StylishPiano({
   midiData, 
   currentTime = 0, 
   onNotePlay,
-  onKeyPositionsUpdate 
+  onKeyPositionsUpdate,
+  timingOffset = 0 // Add timing offset parameter with default value
 }) {
   const [pressedKeys, setPressedKeys] = useState([]);
   const [isDragging, setIsDragging] = useState(false);
@@ -85,8 +86,8 @@ export default function StylishPiano({
   useEffect(() => {
     if (!processedMidiData) return;
     
-    // Apply the same time offset as NotesVisualizer (-110ms)
-    const adjustedCurrentTime = currentTime - 110;
+    // Apply timing offset passed from parent component
+    const adjustedCurrentTime = currentTime + timingOffset;
     
     // Find notes that are active at the current time
     const active = processedMidiData.filter(note => 
@@ -94,7 +95,7 @@ export default function StylishPiano({
     ).map(note => note.note);
     
     setPressedKeys(active);
-  }, [processedMidiData, currentTime]);
+  }, [processedMidiData, currentTime, timingOffset]);
 
   // Measure key positions and report them to parent component
   useEffect(() => {
