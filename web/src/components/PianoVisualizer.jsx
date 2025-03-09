@@ -158,7 +158,7 @@ export default function PianoVisualizer() {
     const loadMockAudio = async () => {
       try {
         // Caminho para o arquivo de áudio na pasta pública
-        const audioUrl = 'mozart.mp3'; // Ajuste o caminho conforme necessário
+        const audioUrl = 'soltaacarta.mp3'; // Ajuste o caminho conforme necessário
         
         // Buscar o arquivo
         const response = await fetch(audioUrl);
@@ -170,7 +170,7 @@ export default function PianoVisualizer() {
         const blob = await response.blob();
         
         // Criar um objeto File a partir do blob
-        const file = new File([blob], 'mozart.mp3', { type: 'audio/mpeg' });
+        const file = new File([blob], 'soltacarta.mp3', { type: 'audio/mpeg' });
         
         // Armazenar o arquivo
         setAudioFile(file);

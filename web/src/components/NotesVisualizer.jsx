@@ -1,178 +1,318 @@
-    // NotesVisualizer.jsx
 import React, { useEffect, useRef } from 'react';
 import styles from './NotesVisualizer.module.css';
 
-export default function NotesVisualizer({ midiData, currentTime = 0 }) {
+export default function NotesVisualizer({ midiData, currentTime = 0, keyPositions = {} }) {
   const canvasRef = useRef(null);
   const particlesRef = useRef([]);
+  const activeNotesRef = useRef(new Set());
+  const animationRef = useRef(null);
   
-  // Setup canvas and animation
   useEffect(() => {
     if (!midiData || !canvasRef.current) return;
     
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
-    let animationFrameId;
     
-    // Set canvas dimensions
+    // Set up canvas dimensions
     const resizeCanvas = () => {
-      const { width, height } = canvas.getBoundingClientRect();
-      canvas.width = width;
-      canvas.height = height;
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = rect.width * window.devicePixelRatio;
+      canvas.height = rect.height * window.devicePixelRatio;
+      ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+      ctx.translate(0, 0);
     };
     
     resizeCanvas();
     window.addEventListener('resize', resizeCanvas);
     
-    // Process MIDI data
-    const noteEvents = midiData.track.flatMap(track => 
-      track.event
-        .filter(event => event.type === 9 || event.type === 8)
-        .map(event => ({
-          ...event,
-          isNoteOn: event.type === 9 && event.data[1] > 0,
-          note: event.data[0],
-          velocity: event.data[1]
-        }))
+    // Process MIDI data into note events with absolute timing
+    const processedNotes = processMidiData(midiData);
+    
+    // Set up animation loop
+    const animate = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      const canvasWidth = canvas.width / window.devicePixelRatio;
+      const canvasHeight = canvas.height / window.devicePixelRatio;
+      
+      // Draw grid lines aligned with piano keys
+      drawPianoAlignedGrid(ctx, canvasWidth, canvasHeight, keyPositions);
+      
+      // Draw notes
+      drawNotes(ctx, processedNotes, currentTime, canvasWidth, canvasHeight);
+      
+      // Draw particles
+      updateAndDrawParticles(ctx);
+      
+      animationRef.current = requestAnimationFrame(animate);
+    };
+    
+    animate();
+    
+    return () => {
+      cancelAnimationFrame(animationRef.current);
+      window.removeEventListener('resize', resizeCanvas);
+    };
+  }, [midiData, keyPositions, currentTime]); // Add currentTime dependency for smoother scrolling
+  
+  useEffect(() => {
+    // Check for newly active notes to generate particles
+    if (!midiData || Object.keys(keyPositions).length === 0) return;
+    
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    
+    const canvasHeight = canvas.getBoundingClientRect().height;
+    const processedNotes = processMidiData(midiData);
+    
+    // Find currently active notes
+    const currentlyActive = new Set();
+    
+    processedNotes.forEach(note => {
+      if (note.startTime <= currentTime && note.endTime >= currentTime) {
+        currentlyActive.add(note.note);
+        
+        // If this note wasn't active before, create particles
+        if (!activeNotesRef.current.has(note.note)) {
+          createParticlesForNote(note.note, canvasHeight);
+        }
+      }
+    });
+    
+    // Update the ref for the next check
+    activeNotesRef.current = currentlyActive;
+  }, [midiData, currentTime, keyPositions]);
+  
+  // Draw grid lines aligned with piano keys
+  function drawPianoAlignedGrid(ctx, width, height, keyPositions) {
+    if (Object.keys(keyPositions).length === 0) {
+      return; // No key positions available yet
+    }
+    
+    // Draw vertical grid lines for each key
+    Object.entries(keyPositions).forEach(([noteNumber, keyInfo]) => {
+      const x = keyInfo.x;
+      const isBlack = keyInfo.isBlack;
+      
+      // Set grid line style based on whether it's a white or black key
+      ctx.strokeStyle = isBlack ? 'rgba(100, 100, 100, 0.1)' : 'rgba(200, 200, 200, 0.1)';
+      ctx.lineWidth = isBlack ? 1 : 1.5;
+      
+      // Draw vertical line from top to bottom
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, height);
+      ctx.stroke();
+    });
+    
+    // Draw horizontal time markers (keep the existing horizontal grid)
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+    ctx.lineWidth = 1;
+    
+    const stepSize = height / 10; // Dynamically space horizontal lines based on height
+    for (let i = 0; i < height; i += stepSize) {
+      ctx.beginPath();
+      ctx.moveTo(0, i);
+      ctx.lineTo(width, i);
+      ctx.stroke();
+    }
+  }
+  
+  // Process MIDI data into a suitable format for visualization
+  function processMidiData(midiData) {
+    // Extract all note-on and note-off events
+    const allEvents = midiData.track.flatMap(track => 
+      track.event.filter(event => event.type === 9 || event.type === 8)
     );
     
-    // Calculate absolute times for all events
+    // Calculate absolute time for each event
     let absoluteEvents = [];
     let currentAbsoluteTime = 0;
     
-    noteEvents.forEach(event => {
+    allEvents.forEach(event => {
       currentAbsoluteTime += event.deltaTime;
       absoluteEvents.push({
         ...event,
-        absoluteTime: currentAbsoluteTime
+        absoluteTime: currentAbsoluteTime,
+        isNoteOn: event.type === 9 && event.data[1] > 0,
+        note: event.data[0],
+        velocity: event.data[1]
       });
     });
     
-    // Set up note-on events in a format easier to visualize
-    const noteOns = absoluteEvents
-      .filter(event => event.isNoteOn)
-      .map(event => {
-        // Find corresponding note-off
-        const noteOff = absoluteEvents.find(e => 
-          !e.isNoteOn && 
-          e.note === event.note && 
-          e.absoluteTime > event.absoluteTime
-        );
-        
-        return {
-          note: event.note,
+    // Match note-on with note-off events to create note objects
+    const notes = [];
+    const activeNotes = {};
+    
+    absoluteEvents.forEach(event => {
+      const noteId = event.note;
+      
+      if (event.isNoteOn) {
+        // Start of note
+        activeNotes[noteId] = {
+          note: noteId,
+          velocity: event.velocity,
           startTime: event.absoluteTime,
-          endTime: noteOff ? noteOff.absoluteTime : event.absoluteTime + 1000,
-          velocity: event.velocity
+          endTime: null
         };
-      });
-    
-    // Create particles when notes are played
-    const createParticles = (note) => {
-      const numberOfParticles = 20;
-      const centerX = mapNoteToX(note);
-      
-      for (let i = 0; i < numberOfParticles; i++) {
-        particlesRef.current.push({
-          x: centerX + (Math.random() * 20 - 10),
-          y: canvas.height - 20 - (Math.random() * 10),
-          vx: Math.random() * 4 - 2,
-          vy: -Math.random() * 3 - 2,
-          radius: Math.random() * 3 + 1,
-          alpha: 1,
-          color: '#00d9e8'
-        });
+      } else {
+        // End of note
+        if (activeNotes[noteId]) {
+          const note = activeNotes[noteId];
+          note.endTime = event.absoluteTime;
+          notes.push(note);
+          delete activeNotes[noteId];
+        }
       }
-    };
+    });
     
-    // Map MIDI note to x position
-    const mapNoteToX = (midiNote) => {
-      const totalNotes = 88; // Full piano range
-      const lowestNote = 21; // A0
+    // Add any notes that didn't have a note-off event
+    Object.values(activeNotes).forEach(note => {
+      note.endTime = note.startTime + 1000; // Default duration
+      notes.push(note);
+    });
+    
+    return notes;
+  }
+  
+  // Draw grid lines for visual reference
+  function drawGrid(ctx, width, height) {
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+    ctx.lineWidth = 1;
+    
+    // Draw horizontal time markers
+    for (let i = 0; i < height; i += 100) {
+      ctx.beginPath();
+      ctx.moveTo(0, i);
+      ctx.lineTo(width, i);
+      ctx.stroke();
+    }
+  }
+  
+  // Draw all visible notes
+  function drawNotes(ctx, notes, currentTime, width, height) {
+    const timeWindow = 5000; // How many milliseconds of notes to show ahead
+    const pixelsPerMs = height / timeWindow;
+    
+    // Sort notes by start time to handle overlaps correctly
+    const sortedNotes = [...notes].sort((a, b) => a.startTime - b.startTime);
+    
+    sortedNotes.forEach(note => {
+      // Only draw notes within our time window
+      if (note.endTime < currentTime - 500 || note.startTime > currentTime + timeWindow) {
+        return;
+      }
       
-      // Calculate position as percentage of canvas width
-      const position = (midiNote - lowestNote) / totalNotes;
-      return position * canvas.width;
-    };
-    
-    // Map MIDI note to width
-    const getNoteWidth = (isBlack) => {
-      return isBlack ? 10 : 20;
-    };
-    
-    // Check if note is black key
-    const isBlackKey = (midiNote) => {
-      const note = midiNote % 12;
-      return [1, 3, 6, 8, 10].includes(note);
-    };
-    
-    // Draw notes and particles
-    const render = (time) => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      // Get position from key positions map
+      const keyInfo = keyPositions[note.note];
       
-      // Draw falling notes
-      const lookAheadTime = currentTime + 3000; // Show notes 3 seconds ahead
+      if (!keyInfo) return; // Skip notes that don't have a corresponding key
       
-      noteOns.forEach(note => {
-        // Only draw notes in our time window
-        if (note.startTime > lookAheadTime || note.endTime < currentTime - 500) return;
-        
-        const isBlack = isBlackKey(note.note);
-        const x = mapNoteToX(note.note);
-        const width = getNoteWidth(isBlack);
-        const height = (note.endTime - note.startTime) / 15;
-        
-        // Calculate y position based on time
-        const startY = canvas.height - ((note.startTime - currentTime) / 15);
-        const endY = startY - height;
-        
-        // Only draw if visible on canvas
-        if (endY < canvas.height + 50) {
-          // Draw note
+      const isBlack = keyInfo.isBlack;
+      const x = keyInfo.x;
+      const width = keyInfo.width * 0.85; // Slightly narrower than the actual key
+      
+      // Calculate y position based on time
+      // Notes that are about to be played are at the bottom (higher y)
+      // The position will continuously update based on currentTime
+      const startY = height - ((note.startTime - currentTime) * pixelsPerMs);
+      const endY = height - ((note.endTime - currentTime) * pixelsPerMs);
+      const noteHeight = Math.max(startY - endY, 5); // Ensure a minimum height
+      
+      // Determine if note is currently being played
+      const isActive = note.startTime <= currentTime && note.endTime >= currentTime;
+      
+      // Draw the note
+      ctx.beginPath();
+      
+      // Draw a rounded rectangle
+      const radius = 5;
+      const left = x - width / 2;
+      const right = x + width / 2;
+      const top = Math.min(endY, startY - noteHeight);
+      const bottom = startY;
+      
+      // Only draw if at least part of the note is visible
+      if (!(bottom < 0 || top > height)) {
+        // Set colors based on note type and state
+        if (isActive) {
+          // Glowing active note
+          ctx.fillStyle = isBlack ? '#00d9e8' : '#00d9e8';
+          ctx.shadowColor = '#00d9e8';
+          ctx.shadowBlur = 10;
+        } else {
+          // Regular note
           ctx.fillStyle = isBlack ? '#333' : '#fff';
-          ctx.strokeStyle = '#00d9e8';
-          ctx.lineWidth = 2;
-          
-          // Check if note is currently being played
-          const isActive = note.startTime <= currentTime && note.endTime >= currentTime;
-          if (isActive) {
-            ctx.fillStyle = '#00d9e8';
-            
-            // Create particles for newly activated notes
-            if (note.startTime <= currentTime && note.startTime > currentTime - 50) {
-              createParticles(note.note);
-            }
-          }
+          ctx.shadowBlur = 0;
+        }
+        
+        ctx.strokeStyle = isBlack ? '#555' : '#e3e3e3';
+        ctx.lineWidth = 1;
+        
         // Draw rounded rectangle
+        ctx.moveTo(left + radius, top);
+        ctx.lineTo(right - radius, top);
+        ctx.quadraticCurveTo(right, top, right, top + radius);
+        ctx.lineTo(right, bottom - radius);
+        ctx.quadraticCurveTo(right, bottom, right - radius, bottom);
+        ctx.lineTo(left + radius, bottom);
+        ctx.quadraticCurveTo(left, bottom, left, bottom - radius);
+        ctx.lineTo(left, top + radius);
+        ctx.quadraticCurveTo(left, top, left + radius, top);
+        
+        ctx.fill();
+        ctx.stroke();
+        
+        // Remove shadow effect to avoid affecting other drawings
+        ctx.shadowBlur = 0;
+        
+        // Add a highlight line to the top of active notes
+        if (isActive) {
+          ctx.strokeStyle = '#ffffff';
+          ctx.lineWidth = 2;
           ctx.beginPath();
-          const radius = 4;
-          ctx.moveTo(x - width/2 + radius, endY);
-          ctx.lineTo(x + width/2 - radius, endY);
-          ctx.quadraticCurveTo(x + width/2, endY, x + width/2, endY + radius);
-          ctx.lineTo(x + width/2, startY - radius);
-          ctx.quadraticCurveTo(x + width/2, startY, x + width/2 - radius, startY);
-          ctx.lineTo(x - width/2 + radius, startY);
-          ctx.quadraticCurveTo(x - width/2, startY, x - width/2, startY - radius);
-          ctx.lineTo(x - width/2, endY + radius);
-          ctx.quadraticCurveTo(x - width/2, endY, x - width/2 + radius, endY);
-          ctx.closePath();
-          
-          ctx.fill();
+          ctx.moveTo(left + 2, bottom);
+          ctx.lineTo(right - 2, bottom);
           ctx.stroke();
         }
+      }
+    });
+  }
+  
+  // Create particles for a newly activated note
+  function createParticlesForNote(noteNumber, canvasHeight) {
+    if (!keyPositions[noteNumber]) return;
+    
+    const x = keyPositions[noteNumber].x;
+    const numParticles = 20;
+    
+    for (let i = 0; i < numParticles; i++) {
+      particlesRef.current.push({
+        x: x + (Math.random() * 20 - 10),
+        y: canvasHeight - (Math.random() * 15),
+        vx: Math.random() * 4 - 2,
+        vy: -Math.random() * 5 - 2,
+        radius: Math.random() * 3 + 1,
+        alpha: 1,
+        color: '#00d9e8'
       });
-      
-      // Update and draw particles
-      ctx.globalCompositeOperation = 'lighter';
-      particlesRef.current = particlesRef.current.filter(p => p.alpha > 0);
-      
-      particlesRef.current.forEach(particle => {
+    }
+  }
+  
+  // Update and draw all particles
+  function updateAndDrawParticles(ctx) {
+    ctx.globalCompositeOperation = 'lighter';
+    
+    // Update and filter particles
+    particlesRef.current = particlesRef.current
+      .filter(p => p.alpha > 0)
+      .map(particle => {
         // Update position
         particle.x += particle.vx;
         particle.y += particle.vy;
         
-        // Gravity effect
-        particle.vy += 0.05;
+        // Add gravity
+        particle.vy += 0.1;
         
         // Fade out
         particle.alpha -= 0.02;
@@ -180,8 +320,8 @@ export default function NotesVisualizer({ midiData, currentTime = 0 }) {
         // Draw particle
         ctx.beginPath();
         ctx.arc(particle.x, particle.y, particle.radius, 0, Math.PI * 2);
-        ctx.closePath();
         
+        // Create gradient for glow effect
         const gradient = ctx.createRadialGradient(
           particle.x, particle.y, 0,
           particle.x, particle.y, particle.radius
@@ -191,19 +331,12 @@ export default function NotesVisualizer({ midiData, currentTime = 0 }) {
         
         ctx.fillStyle = gradient;
         ctx.fill();
+        
+        return particle;
       });
-      ctx.globalCompositeOperation = 'source-over';
-      
-      animationFrameId = requestAnimationFrame(render);
-    };
     
-    render();
-    
-    return () => {
-      window.removeEventListener('resize', resizeCanvas);
-      cancelAnimationFrame(animationFrameId);
-    };
-  }, [midiData, currentTime]);
+    ctx.globalCompositeOperation = 'source-over';
+  }
   
   return (
     <div className={styles.visualizerContainer}>
