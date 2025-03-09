@@ -4,7 +4,7 @@ import Moises from 'moises/sdk';
 import fs from 'fs';
 import path from 'path';
 
-const moises = new Moises({ apiKey: "" });
+const moises = new Moises({ apiKey: "8f71aad7-2ca6-412f-bba2-8bdf0ee02920" });
 
 export async function POST(request) {
   console.log('processAudio API called');
@@ -34,17 +34,17 @@ export async function POST(request) {
     }
 
     // Define o nome do arquivo com extensão .mp3
-    const fileName = `piano.mp3`;
+    const fileName = `song.mp3`;
     const filePath = path.join(tempDir, fileName);
 
     // Salva o arquivo mp3
     fs.writeFileSync(filePath, buffer);
 
     // Processa o arquivo com a API Moises
-    await moises.processFile("piano_separation", "temp/piano.mp3", "temp");
+    await moises.processFile("piano_separation", "temp/song.mp3", "temp");
 
     console.log('Arquivo processado e salvo com sucesso.');
-    return new NextResponse(null, { status: 200 });
+    return NextResponse.json({ success: true }, { status: 200 });
   } catch (error) {
     console.error('Erro ao processar o arquivo:', error);
     return NextResponse.json({ error: 'Erro ao salvar o arquivo.' }, { status: 500 });

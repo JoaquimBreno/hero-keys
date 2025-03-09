@@ -73,7 +73,10 @@ export default function AudioDragDrop() {
     };
 
     const handleFileInputChange = () => {
+      // Reset file input value to allow selecting the same file again
       processFiles(fileInput.files);
+      // This is needed to allow re-uploading the same file
+      fileInput.value = '';
     };
 
     ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
