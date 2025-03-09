@@ -48,10 +48,6 @@ export default function PianoTilesContainer({ midiData, fileName, audioData }) {
       <div className={styles.blurredBackground}></div>
       
       <div className={styles.contentContainer}>
-        <div className={styles.header}>
-          <h1 className={styles.title}>{fileName || "MIDI Visualization"}</h1>
-        </div>
-        
         {/* Notes visualization with particles */}
         <div className={styles.visualizerSection}>
           <NotesVisualizer 
