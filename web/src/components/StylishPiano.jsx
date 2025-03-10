@@ -7,12 +7,14 @@ export default function StylishPiano({
   currentTime = 0, 
   onNotePlay,
   onKeyPositionsUpdate,
-  timingOffset = 0 // Add timing offset parameter with default value
+  timingOffset = 0, // Add timing offset parameter with default value
+  playedMidiNotes = [] // Add played MIDI notes from external device
 }) {
   const [pressedKeys, setPressedKeys] = useState([]);
   const [isDragging, setIsDragging] = useState(false);
   const [lastPlayedNote, setLastPlayedNote] = useState(null);
   const [processedMidiData, setProcessedMidiData] = useState(null);
+  const [activeNoteInfo, setActiveNoteInfo] = useState(null); // Para mostrar o indicador de nota
   
   // Refs for key elements
   const whiteKeysRef = useRef({});
@@ -82,7 +84,7 @@ export default function StylishPiano({
     setProcessedMidiData(notes);
   }, [midiData]);
   
-  // Update active keys based on current time
+  // Update active keys and note info based on current time and external MIDI input
   useEffect(() => {
     if (!processedMidiData) return;
     
@@ -90,12 +92,25 @@ export default function StylishPiano({
     const adjustedCurrentTime = currentTime + timingOffset;
     
     // Find notes that are active at the current time
-    const active = processedMidiData.filter(note => 
+    const activeFromSequence = processedMidiData.filter(note => 
       note.startTime <= adjustedCurrentTime && note.endTime >= adjustedCurrentTime
     ).map(note => note.note);
     
-    setPressedKeys(active);
-  }, [processedMidiData, currentTime, timingOffset]);
+    // Combine sequence notes with played MIDI notes
+    const allActiveNotes = [...new Set([...activeFromSequence, ...playedMidiNotes])];
+    
+    setPressedKeys(allActiveNotes);
+    
+    // Update active note info for display
+    if (allActiveNotes.length > 0) {
+      // Get the highest note for display (usually melody)
+      const highestNote = Math.max(...allActiveNotes);
+      const noteName = getNoteNameWithOctave(highestNote);
+      setActiveNoteInfo({ note: highestNote, name: noteName });
+    } else {
+      setActiveNoteInfo(null);
+    }
+  }, [processedMidiData, currentTime, timingOffset, playedMidiNotes]);
 
   // Measure key positions and report them to parent component
   useEffect(() => {
@@ -149,6 +164,12 @@ export default function StylishPiano({
     setIsDragging(true);
     setPressedKeys(prev => [...prev, midiNote]);
     setLastPlayedNote(midiNote);
+    
+    // Update active note info
+    setActiveNoteInfo({ 
+      note: midiNote, 
+      name: getNoteNameWithOctave(midiNote) 
+    });
     
     if (onNotePlay) {
       onNotePlay({
@@ -246,6 +267,15 @@ export default function StylishPiano({
 
   return (
     <div className={styles.pianoContainer} ref={containerRef}>
+      {/* Nota ativa indicador */}
+      {activeNoteInfo && (
+        <div className={styles.activeNoteIndicator}>
+          <div className={styles.noteNameBadge}>
+            {activeNoteInfo.name}
+          </div>
+        </div>
+      )}
+      
       <div className={styles.keyboard}>
         {/* White keys */}
         <div className={styles.whiteKeysContainer}>
@@ -359,6 +389,14 @@ function getBlackKeyCount(startNote, endNote) {
     if (isBlackKey(i)) count++;
   }
   return count;
+}
+
+// Novo helper para obter nome da nota com oitava mais completo
+function getNoteNameWithOctave(midiNote) {
+  const noteNames = ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B'];
+  const octave = Math.floor(midiNote / 12) - 1;
+  const noteName = noteNames[midiNote % 12];
+  return `${noteName}${octave}`;
 }
 
 // For the positioning calculation

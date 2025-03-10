@@ -2,10 +2,18 @@
 import React, { useState, useRef, useEffect } from 'react';
 import styles from './AudioPlayer.module.css';
 
-export default function AudioPlayer({ audioData, onTimeUpdate, fileName, onVisualizerToggle, showSheetMusic }) {
+export default function AudioPlayer({ 
+  audioData, 
+  onTimeUpdate, 
+  fileName, 
+  onVisualizerToggle, 
+  showSheetMusic
+  // Removed onMidiSoundToggle and isMidiSoundEnabled props
+}) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [displayTime, setDisplayTime] = useState(0); // For display purposes only
   const [duration, setDuration] = useState(0);
+  const [isMuted, setIsMuted] = useState(false); // New state for tracking mute status
   const audioRef = useRef(null);
   const currentTimeRef = useRef(0); // Store current time in ref to avoid re-renders
   const seekingRef = useRef(false); // Track when user is manually seeking
@@ -74,6 +82,16 @@ export default function AudioPlayer({ audioData, onTimeUpdate, fileName, onVisua
     }
   };
   
+  // Toggle mute function - mute but keep playing
+  const toggleMute = () => {
+    if (audioRef.current) {
+      audioRef.current.muted = !audioRef.current.muted;
+      setIsMuted(!isMuted);
+    }
+  };
+  
+  // Removed handleMidiSoundToggle function
+  
   // No longer need timeUpdate event handler
   // The animation frame handles this more efficiently
   
@@ -126,6 +144,18 @@ export default function AudioPlayer({ audioData, onTimeUpdate, fileName, onVisua
         >
           {isPlaying ? '❚❚' : '▶'}
         </button>
+        
+        {/* Add mute button */}
+        <button
+          className={`${styles.controlButton} ${isMuted ? styles.activeMute : ''}`}
+          onClick={toggleMute}
+          aria-label={isMuted ? 'Unmute' : 'Mute'}
+          title={isMuted ? 'Unmute' : 'Mute'}
+        >
+          {isMuted ? '🔇' : '🔊'}
+        </button>
+        
+        {/* Removed MIDI sound toggle button */}
         
         <div className={styles.timeInfo}>
           <span className={styles.currentTime}>{formatTime(displayTime)}</span>

@@ -159,7 +159,7 @@ export default function PianoVisualizer() {
     const loadMockAudio = async () => {
       try {
         // Caminho para o arquivo de áudio na pasta pública
-        const audioUrl = 'devinteste.mp3'; // Ajuste o caminho conforme necessário
+        const audioUrl = 'soltaacarta.mp3'; // Ajuste o caminho conforme necessário
         
         // Buscar o arquivo
         const response = await fetch(audioUrl);
@@ -171,7 +171,7 @@ export default function PianoVisualizer() {
         const blob = await response.blob();
         
         // Criar um objeto File a partir do blob
-        const file = new File([blob], 'devinteste.mp3', { type: 'audio/mpeg' });
+        const file = new File([blob], 'soltaacarta.mp3', { type: 'audio/mpeg' });
         
         // Armazenar o arquivo
         setAudioFile(file);
@@ -265,6 +265,7 @@ export default function PianoVisualizer() {
               midiData={midiLoaded} 
               fileName={fileName}
               audioData={audioFile}
+              autoOpenMidiConnector={true}
             />
           
             

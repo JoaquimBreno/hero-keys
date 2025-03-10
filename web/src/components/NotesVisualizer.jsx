@@ -8,6 +8,7 @@ const NotesVisualizer = memo(function NotesVisualizer({
   keyPositions = {},
   lookaheadTime = 3000, // In milliseconds (3 seconds ahead)
   timingOffset = 0, // Add timing offset parameter with default value
+  playedMidiNotes = [] // Add played MIDI notes from external device
 }) {
   const canvasRef = useRef(null);
   const particlesRef = useRef([]);
@@ -19,6 +20,7 @@ const NotesVisualizer = memo(function NotesVisualizer({
   const lastFrameTimeRef = useRef(0); // Track last frame time to ensure consistent timing
   const lookaheadTimeRef = useRef(lookaheadTime); // Store lookahead time in ref (ms)
   const timingOffsetRef = useRef(timingOffset); // Store timing offset in ref
+  const playedMidiNotesRef = useRef(playedMidiNotes); // Store played MIDI notes in ref
   
   // Update refs when props change without triggering renders
   useEffect(() => {
@@ -37,6 +39,23 @@ const NotesVisualizer = memo(function NotesVisualizer({
   useEffect(() => {
     timingOffsetRef.current = timingOffset;
   }, [timingOffset]);
+  
+  useEffect(() => {
+    playedMidiNotesRef.current = playedMidiNotes;
+    
+    // Create particles for newly played MIDI notes
+    if (canvasRef.current && keyPositions) {
+      const canvas = canvasRef.current;
+      const canvasHeight = canvas.getBoundingClientRect().height;
+      
+      // Find newly played notes
+      playedMidiNotes.forEach(note => {
+        if (!activeNotesRef.current.has(note)) {
+          createParticlesForNote(note, canvasHeight);
+        }
+      });
+    }
+  }, [playedMidiNotes, keyPositions]);
   
   // Process MIDI data only when it changes
   useEffect(() => {
@@ -132,6 +151,7 @@ const NotesVisualizer = memo(function NotesVisualizer({
     const currentlyActive = new Set();
     // console.log("Checking active notes - Current time:", currentTime, "Adjusted time:", adjustedTime);
     
+    // Add notes from the MIDI sequence
     processedNotes.forEach(note => {
       // More precise comparison with consistent offset
       if (note.startTime <= adjustedTime && note.endTime >= adjustedTime) {
@@ -142,6 +162,11 @@ const NotesVisualizer = memo(function NotesVisualizer({
           createParticlesForNote(note.note, canvasHeight);
         }
       }
+    });
+    
+    // Add notes from MIDI device input
+    playedMidiNotesRef.current.forEach(note => {
+      currentlyActive.add(note);
     });
     
     // Update the ref for the next check
@@ -318,6 +343,9 @@ const NotesVisualizer = memo(function NotesVisualizer({
       // Determine if note is currently being played with adjusted time
       const isActive = note.startTime <= adjustedTime && note.endTime >= adjustedTime;
       
+      // Also check if this note is being played via MIDI
+      const isPlayedViaMidi = playedMidiNotesRef.current.includes(note.note);
+      
       // Draw the note
       ctx.beginPath();
       
@@ -331,7 +359,7 @@ const NotesVisualizer = memo(function NotesVisualizer({
       // Only draw if at least part of the note is visible
       if (!(bottom < 0 || top > height)) {
         // Set colors based on note type and state
-        if (isActive) {
+        if (isActive || isPlayedViaMidi) {
           // Glowing active note
           ctx.fillStyle = isBlack ? '#00d9e8' : '#00d9e8';
           ctx.shadowColor = '#00d9e8';
@@ -372,6 +400,45 @@ const NotesVisualizer = memo(function NotesVisualizer({
           ctx.stroke();
         }
       }
+    });
+    
+    // Draw MIDI played notes that aren't part of the sequence
+    playedMidiNotesRef.current.forEach(noteNumber => {
+      const keyInfo = keyPositions[noteNumber];
+      if (!keyInfo) return; // Skip if no position information
+      
+      const isBlack = keyInfo.isBlack;
+      const x = keyInfo.x;
+      const noteWidth = keyInfo.width * 0.85;
+      
+      // Draw at the bottom of the canvas (real-time played)
+      ctx.beginPath();
+      const radius = 5;
+      const left = x - noteWidth / 2;
+      const right = x + noteWidth / 2;
+      const bottom = height;
+      const top = height - 30; // Fixed height for played notes
+      
+      // Glowing effect for played notes
+      ctx.fillStyle = '#00d9e8';
+      ctx.shadowColor = '#00d9e8';
+      ctx.shadowBlur = 15;
+      
+      // Draw rounded rectangle
+      ctx.moveTo(left + radius, top);
+      ctx.lineTo(right - radius, top);
+      ctx.quadraticCurveTo(right, top, right, top + radius);
+      ctx.lineTo(right, bottom - radius);
+      ctx.quadraticCurveTo(right, bottom, right - radius, bottom);
+      ctx.lineTo(left + radius, bottom);
+      ctx.quadraticCurveTo(left, bottom, left, bottom - radius);
+      ctx.lineTo(left, top + radius);
+      ctx.quadraticCurveTo(left, top, left + radius, top);
+      
+      ctx.fill();
+      
+      // Remove shadow effect to avoid affecting other drawings
+      ctx.shadowBlur = 0;
     });
     
     // Log how many notes are being shown vs skipped
