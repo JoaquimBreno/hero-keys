@@ -143,3 +143,36 @@
       font-size: 8px;
     }
   }
+
+  .activeNoteIndicator {
+    position: absolute;
+    top: -60px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    justify-content: center;
+    z-index: 100;
+  }
+  
+  .noteNameBadge {
+    background-color: rgba(0, 217, 232, 0.8);
+    color: white;
+    font-size: 24px;
+    font-weight: bold;
+    padding: 8px 20px;
+    border-radius: 30px;
+    box-shadow: 0 0 15px rgba(0, 217, 232, 0.7);
+    animation: pulsate 1.5s infinite alternate;
+    transition: all 0.3s;
+  }
+  
+  @keyframes pulsate {
+    0% {
+      transform: scale(1);
+      box-shadow: 0 0 10px rgba(0, 217, 232, 0.7);
+    }
+    100% {
+      transform: scale(1.05);
+      box-shadow: 0 0 20px rgba(0, 217, 232, 0.9);
+    }
+  }
