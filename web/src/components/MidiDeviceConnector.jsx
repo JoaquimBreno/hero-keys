@@ -32,9 +32,7 @@ export default function MidiDeviceConnector({
     if ((!soundfontPlayerRef.current && isOpen) || (connectionStatus === 'disconnected' && isOpen)) {
       // Verificar se o AudioContext está suspenso e tentar resumir
       if (audioContextRef.current.state === 'suspended') {
-        audioContextRef.current.resume().then(() => {
-          console.log('AudioContext resumed successfully');
-        }).catch(err => {
+        audioContextRef.current.resume().catch(err => {
           console.error('Failed to resume AudioContext:', err);
         });
       }
@@ -63,12 +61,10 @@ export default function MidiDeviceConnector({
     
     try {
       setIsLoadingSound(true);
-      console.log("Carregando soundfont...");
       
       // Verificar e resumir o contexto de áudio se necessário
       if (audioContextRef.current.state === 'suspended') {
         await audioContextRef.current.resume();
-        console.log("AudioContext resumed before loading soundfont");
       }
       
       // Usar a biblioteca FluidR3_GM que é mais confiável
@@ -79,13 +75,12 @@ export default function MidiDeviceConnector({
         url: 'https://gleitz.github.io/midi-js-soundfonts/FluidR3_GM/'
       });
       
-      console.log("Soundfont carregado com sucesso!");
       soundfontPlayerRef.current = player;
       
       // Tocar uma nota de teste para verificar o som
       setTimeout(() => {
         try {
-          player.play('C4', 0, { duration: 0.5, gain: 0.5 })
+          player.play('C4', 0, { duration: 0.5, gain: 0.5 });
         } catch (error) {
           console.error('Erro ao tentar tocar nota de teste:', error);
         }
@@ -155,9 +150,7 @@ export default function MidiDeviceConnector({
     
     // Garantir que o contexto de áudio esteja ativo após interação do usuário
     if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
-      audioContextRef.current.resume().then(() => {
-        console.log('AudioContext resumed on connection');
-      });
+      audioContextRef.current.resume();
     }
     
     // Remove any previous listeners
@@ -176,7 +169,6 @@ export default function MidiDeviceConnector({
         try {
           soundfontPlayerRef.current.play('G4', 0, { duration: 0.3, gain: 0.7 });
           soundfontPlayerRef.current.play('C5', 0.3, { duration: 0.3, gain: 0.7 });
-          console.log('Notas de confirmação tocadas');
         } catch (error) {
           console.error('Erro ao tocar notas de confirmação:', error);
         }
@@ -240,8 +232,6 @@ export default function MidiDeviceConnector({
             activeNotesRef.current[noteName].stop();
           }
           
-          console.log(`Tentando tocar nota: ${noteName} com velocidade: ${enhancedVelocity}`);
-          
           // Play the note with explicit options
           activeNotesRef.current[noteName] = soundfontPlayerRef.current.play(
             noteName, 
@@ -254,7 +244,6 @@ export default function MidiDeviceConnector({
           );
         } else if (type === 8) { // Note Off
           // Stop the note if it's playing
-          console.log(`Parando nota: ${noteName}`);
           if (activeNotesRef.current[noteName]) {
             activeNotesRef.current[noteName].stop();
             delete activeNotesRef.current[noteName];
@@ -263,8 +252,6 @@ export default function MidiDeviceConnector({
       } catch (error) {
         console.error('Erro ao processar mensagem MIDI:', error);
       }
-    } else {
-      console.warn('SoundFont player não está disponível!');
     }
 
     // Pass the formatted event to the callback
@@ -301,8 +288,6 @@ export default function MidiDeviceConnector({
       if (audioContextRef.current.state === 'suspended') {
         audioContextRef.current.resume();
       }
-      
-      console.log('Testando áudio...');
       
       // Tocar uma sequência de notas para teste
       const notes = ['C4', 'E4', 'G4', 'C5'];
