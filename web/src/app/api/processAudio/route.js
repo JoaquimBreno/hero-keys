@@ -4,7 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import fetch from 'node-fetch';
 
-const moises = new Moises({ apiKey: "" });
+const moises = new Moises({ apiKey: "8f71aad7-2ca6-412f-bba2-8bdf0ee02920"});
 
 export async function POST(request) {
   console.log('processAudio API called');
@@ -49,6 +49,23 @@ export async function POST(request) {
     const pianoOutputBuffer = fs.readFileSync(pianoOutputPath);
     const pianoOutputBase64 = pianoOutputBuffer.toString('base64');
 
+    // Ler o arquivo Chords.json
+    const chordsPath = path.join(tempDir, 'Chords.json');
+    let chordsData = {};
+    
+    if (fs.existsSync(chordsPath)) {
+      try {
+        const chordsFileContent = fs.readFileSync(chordsPath, 'utf8');
+        chordsData = JSON.parse(chordsFileContent);
+        console.log('Arquivo de acordes carregado com sucesso');
+      } catch (chordsError) {
+        console.error('Erro ao ler o arquivo de acordes:', chordsError);
+        // Continue mesmo se falhar a leitura dos acordes
+      }
+    } else {
+      console.log('Arquivo de acordes não encontrado:', chordsPath);
+    }
+
     // Enviar o arquivo para a API Python
     const response = await fetch('http://localhost:8000/generate_midi', {
       method: 'POST',
@@ -60,10 +77,18 @@ export async function POST(request) {
       throw new Error('Erro ao enviar o arquivo para a API Python');
     }
 
-    const { midiBase64 } = await response.json();
+    // Modificar esta linha para usar a propriedade correta da resposta
+    const responseData = await response.json();
+    const midiBase64 = responseData.midi_base64; // Usando o nome da propriedade do Python (snake_case)
 
     console.log('Arquivo processado e salvo com sucesso.');
-    return NextResponse.json({ midiBase64 }, { status: 200 });
+    
+    // Retorna o base64 do MIDI e os dados de acordes
+    return NextResponse.json({ 
+      midiBase64, 
+      chords: chordsData 
+    }, { status: 200 }); 
+    
   } catch (error) {
     console.error('Erro ao processar o arquivo:', error);
     return NextResponse.json({ error: 'Erro ao salvar o arquivo.' }, { status: 500 });

@@ -1,8 +1,8 @@
 // FILE: page.js
 'use client';
 import React from 'react';
-import AudioDragDrop from '@/components/AudioDragDrop.jsx';
-import PianoVisualizer from '@/components/PianoVisualizer.jsx';
+//import PianoVisualizer from '@/components/PianoVisualizer.jsx';
+import PianoVisualizer2 from '@/components/PianoVisualizer2.jsx';
 
 export default function Home() {
   return (
@@ -12,7 +12,7 @@ export default function Home() {
         <p>Visualize suas músicas MIDI com animações elegantes em estilo neon</p>
       </header>
 
-      <AudioDragDrop/>
+      <PianoVisualizer2/>
       {/* <PianoVisualizer /> */}
 
       <footer>
