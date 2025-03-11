@@ -17,6 +17,10 @@
 /.next/
 /out/
 
+*.mp3
+*.json
+
+
 # production
 /build
 
