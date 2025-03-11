@@ -2,7 +2,8 @@
 import { useEffect, useRef, useState } from 'react';
 import Script from 'next/script';
 import styles from './PianoVisualizer.module.css';
-import MIDIParser from 'midi-parser-js';
+import * as Tone from 'tone';
+import { Midi } from '@tonejs/midi';  // Add import for MIDI parsing
 import PianoTilesContainer from './PianoTilesContainer';
 
 export default function PianoVisualizer() {
@@ -34,28 +35,22 @@ export default function PianoVisualizer() {
       // Fetch the MIDI file from public directory
       const midiResponse = await fetch('/devinteste.mid');
       const midiArrayBuffer = await midiResponse.arrayBuffer();
-      const midiUint8Array = new Uint8Array(midiArrayBuffer);
       
-      if (typeof MIDIParser !== 'undefined') {
-        // Parse the MIDI data
-        const midiFile = MIDIParser.parse(midiUint8Array);
-        console.log('Dev mock MIDI file parsed:', midiFile);
+      // Load the MIDI data using the correct Midi parser
+      const midi = new Midi(midiArrayBuffer);
+      console.log('Dev mock MIDI file parsed with Tone.js:', midi);
+      
+      setIsTransitioning(true);
+      
+      setTimeout(() => {
+        setMidiLoaded(midi);
+        setAudioFile(audioObjectUrl);
         
-        setIsTransitioning(true);
-        
+        // End transition after a delay
         setTimeout(() => {
-          setMidiLoaded(midiFile);
-          setAudioFile(audioObjectUrl);
-          
-          // End transition after a delay
-          setTimeout(() => {
-            setIsTransitioning(false);
-          }, 300);
-        }, 500);
-      } else {
-        console.error('MIDIParser not loaded for mock data');
-        alert('Erro: parser MIDI não carregado. Por favor, atualize a página e tente novamente.');
-      }
+          setIsTransitioning(false);
+        }, 300);
+      }, 500);
     } catch (error) {
       console.error('Error loading mock files:', error);
       alert('Erro ao carregar arquivos de teste.');
@@ -64,9 +59,9 @@ export default function PianoVisualizer() {
     }
   };
 
-  // Handle MIDI Parser script load
+  // Handle Tone.js script load
   const handleScriptLoad = () => {
-    console.log('MIDI Parser script loaded');
+    console.log('Tone.js script loaded');
     setIsLoaded(true);
   };
 
@@ -87,7 +82,7 @@ export default function PianoVisualizer() {
     return new Blob([byteArray], { type: 'audio/mp3' });
   };
 
-  // Converte o áudio para base64 e envia para a rota /api/processAudio
+  // Convert audio to base64 and send to /api/processAudio route
   function uploadFileToApi(file) {
     setLoading(true);
     const reader = new FileReader();
@@ -101,7 +96,7 @@ export default function PianoVisualizer() {
           body: JSON.stringify({ audioBase64: base64Data })
         });
         
-        // Recupera tanto o MIDI quanto os dados de acordes
+        // Get both MIDI and chord data
         const responseData = await res.json();
         const { midiBase64, chords, pianoOutputBuffer } = responseData;
         
@@ -109,41 +104,38 @@ export default function PianoVisualizer() {
           throw new Error('MIDI data not received from server');
         }
         
-        // Armazena os dados de acordes
+        // Store chord data
         if (chords) {
           setChordsData(chords);
         }
         
-        if (typeof MIDIParser !== 'undefined') {
-          try {
-            const midiFile = MIDIParser.parse(midiBase64);
-            console.log('MIDI file parsed:', midiFile);
+        // Convert base64 MIDI to ArrayBuffer and parse with Tone.js
+        const midiData = base64ToArrayBuffer(midiBase64);
+        try {
+          const midi = new Midi(midiData);
+          console.log('MIDI file parsed with Tone.js:', midi);
+          
+          setIsTransitioning(true);
+          setTimeout(() => { 
+            setMidiLoaded(midi);
+            if (pianoOutputBuffer) {
+              const audioBlob = base64ToBlob(pianoOutputBuffer);
+              const audioUrl = URL.createObjectURL(audioBlob);
+              setAudioFile(audioUrl); // Now audioFile will be a playable URL
+            }
+            else{
+              setAudioFile(file);
+            }
             
-            setIsTransitioning(true);
-            setTimeout(() => { 
-              setMidiLoaded(midiFile);
-              if (pianoOutputBuffer) {
-                const audioBlob = base64ToBlob(pianoOutputBuffer);
-                const audioUrl = URL.createObjectURL(audioBlob);
-                setAudioFile(audioUrl); // Now audioFile will be a playable URL
-              }
-              else{
-                setAudioFile(file);
-              }
-              
-              // End transition after a delay
-              setTimeout(() => {
-                setIsTransitioning(false);
-              }, 300);
-            }, 500);
-            
-          } catch (parseError) {
-            console.error('Error parsing MIDI data:', parseError);
-            alert('Erro ao analisar o arquivo MIDI. Por favor, tente novamente.');
-          }
-        } else {
-          console.error('MIDIParser not loaded');
-          alert('Erro: parser MIDI não carregado. Por favor, atualize a página e tente novamente.');
+            // End transition after a delay
+            setTimeout(() => {
+              setIsTransitioning(false);
+            }, 300);
+          }, 500);
+          
+        } catch (parseError) {
+          console.error('Error parsing MIDI data with Tone.js:', parseError);
+          alert('Erro ao analisar o arquivo MIDI. Por favor, tente novamente.');
         }
       } catch (error) {
         console.error("Erro ao processar o arquivo MIDI:", error);
@@ -161,9 +153,26 @@ export default function PianoVisualizer() {
     reader.readAsDataURL(file);
   }
   
-  // Effect for handling drag and drop
+  // Helper function to convert base64 to ArrayBuffer
+  function base64ToArrayBuffer(base64) {
+    // Remove data URL prefix if present
+    const base64WithoutPrefix = base64.includes('base64,') 
+      ? base64.split('base64,')[1] 
+      : base64;
+    
+    const binaryString = atob(base64WithoutPrefix);
+    const bytes = new Uint8Array(binaryString.length);
+    
+    for (let i = 0; i < binaryString.length; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
+    
+    return bytes.buffer;
+  }
+  
+  // Set up drag and drop functionality
   useEffect(() => {
-    if (!dropZoneRef.current || !fileInputRef.current) return;
+    if (!isLoaded) return;
     
     const dropZone = dropZoneRef.current;
     const fileInput = fileInputRef.current;

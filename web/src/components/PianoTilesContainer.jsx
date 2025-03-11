@@ -7,7 +7,7 @@ import MidiDeviceConnector from './MidiDeviceConnector';
 import styles from './PianoTiles.module.css';
 
 // Define consistent timing offsets for all components
-const NOTE_TIMING_OFFSET = -1000; // milliseconds
+const NOTE_TIMING_OFFSET = 0; // milliseconds
 
 export default function PianoTilesContainer({ midiData, fileName, audioData, autoOpenMidiConnector = false }) {
   const [currentPlaybackTime, setCurrentPlaybackTime] = useState(0);
