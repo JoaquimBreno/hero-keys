@@ -4,7 +4,9 @@ import fs from 'fs';
 import path from 'path';
 import fetch from 'node-fetch';
 
-const moises = new Moises({ apiKey: "8f71aad7-2ca6-412f-bba2-8bdf0ee02920"});
+const moises = new Moises({ 
+  apiKey: process.env.MOISES_API_KEY 
+});
 
 export async function POST(request) {
   console.log('processAudio API called');
@@ -86,7 +88,8 @@ export async function POST(request) {
     // Retorna o base64 do MIDI e os dados de acordes
     return NextResponse.json({ 
       midiBase64, 
-      chords: chordsData 
+      chords: chordsData ,
+      pianoOutputBuffer: pianoOutputBase64
     }, { status: 200 }); 
     
   } catch (error) {

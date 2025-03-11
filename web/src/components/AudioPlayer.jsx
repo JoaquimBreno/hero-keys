@@ -21,17 +21,30 @@ export default function AudioPlayer({
   
   // Initialize audio with the provided data
   useEffect(() => {
-    if (audioData) {
+    if (!audioData) return;
+  
+    let audioUrl;
+    
+    // Check if audioData is already an ObjectURL
+    if (typeof audioData === 'string' && audioData.startsWith('blob:')) {
+      audioUrl = audioData;
+    } else {
+      // Convert Blob/ArrayBuffer to ObjectURL
       const audioBlob = new Blob([audioData], { type: 'audio/wav' });
-      const audioUrl = URL.createObjectURL(audioBlob);
-      
-      if (audioRef.current) {
-        audioRef.current.src = audioUrl;
-        audioRef.current.load();
-      }
-      
-      return () => URL.revokeObjectURL(audioUrl);
+      audioUrl = URL.createObjectURL(audioBlob);
     }
+    
+    if (audioRef.current) {
+      audioRef.current.src = audioUrl;
+      audioRef.current.load();
+    }
+    
+    // Only revoke URL if we created it
+    return () => {
+      if (audioUrl !== audioData) {
+        URL.revokeObjectURL(audioUrl);
+      }
+    };
   }, [audioData]);
   
   // Handle metadata loaded
