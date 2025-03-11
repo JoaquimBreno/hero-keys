@@ -43,6 +43,16 @@
   transform: scale(1);
   opacity: 1;
   box-shadow: 0 0 15px rgba(60, 120, 255, 0.4);
+  animation: pulseHighlight 2s infinite;
+}
+
+/* Add these new style rules for text in active chords */
+.activeChord .chordName,
+.activeChord .chordTime,
+.activeChord .chordBass,
+.activeChord .barBeat {
+  color: #000; /* Black text for better contrast */
+  text-shadow: 0 0 2px rgba(255, 255, 255, 0.3); /* Subtle text shadow for legibility */
 }
 
 .chordName {
@@ -112,8 +122,4 @@
   0% { box-shadow: 0 0 5px rgba(60, 120, 255, 0.2); }
   50% { box-shadow: 0 0 20px rgba(60, 120, 255, 0.6); }
   100% { box-shadow: 0 0 5px rgba(60, 120, 255, 0.2); }
-}
-
-.activeChord {
-  animation: pulseHighlight 2s infinite;
 }
