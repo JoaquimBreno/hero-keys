@@ -39,7 +39,7 @@
 }
 
 .activeChord {
-  background-color: rgba(60, 120, 255, 0.7);
+  background-image: linear-gradient(90deg, #00dae8, #0affa7);
   transform: scale(1);
   opacity: 1;
   box-shadow: 0 0 15px rgba(60, 120, 255, 0.4);
