@@ -359,7 +359,7 @@ export default function PianoVisualizer() {
   const backButtonStyle = {
     position: 'fixed',
     bottom: '20px',
-    left: '100%',
+    left: '99%',
     transform: 'translateX(-120%)',
     zIndex: 1001,
     padding: '10px 20px',
