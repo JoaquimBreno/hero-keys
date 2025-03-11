@@ -6,7 +6,7 @@ const NotesVisualizer = memo(function NotesVisualizer({
   midiData, 
   currentTime = 0, 
   keyPositions = {},
-  lookaheadTime = 3000, // In milliseconds (3 seconds ahead)
+  lookaheadTime = 2000, // In milliseconds (3 seconds ahead)
   timingOffset = 0, // Add timing offset parameter with default value
   playedMidiNotes = [] // Add played MIDI notes from external device
 }) {
@@ -57,21 +57,40 @@ const NotesVisualizer = memo(function NotesVisualizer({
     }
   }, [playedMidiNotes, keyPositions]);
   
-  // Process MIDI data only when it changes
+  // Process MIDI data when it changes - adapted for Tone.js format
   useEffect(() => {
-    if (midiData) {
-      processedNotesRef.current = processMidiData(midiData);
-      
-      // Log the earliest and latest notes to help debug timing issues
-      if (processedNotesRef.current && processedNotesRef.current.length > 0) {
-        const sortedByTime = [...processedNotesRef.current].sort((a, b) => a.startTime - b.startTime);
-        const earliestNote = sortedByTime[0];
-        const latestNote = sortedByTime[sortedByTime.length - 1];
-        
-        console.log("Earliest note starts at (ms):", earliestNote.startTime);
-        console.log("Latest note starts at (ms):", latestNote.startTime);
-        console.log("MIDI time range (ms):", latestNote.startTime - earliestNote.startTime);
+    if (!midiData) return;
+    
+    // Extract all notes from all tracks
+    const allNotes = [];
+    
+    midiData.tracks.forEach(track => {
+      if (track.notes && track.notes.length > 0) {
+        track.notes.forEach(note => {
+          // Convert Tone.js time (seconds) to milliseconds for consistency
+          allNotes.push({
+            note: note.midi, // MIDI note number
+            velocity: note.velocity * 127, // Convert 0-1 to 0-127
+            startTime: note.time * 1000, // Convert to ms
+            endTime: (note.time + note.duration) * 1000, // Convert to ms
+          });
+        });
       }
+    });
+    
+    // Sort notes by start time
+    allNotes.sort((a, b) => a.startTime - b.startTime);
+    
+    processedNotesRef.current = allNotes;
+    
+    // Log the earliest and latest notes to help debug timing issues
+    if (allNotes.length > 0) {
+      const earliestNote = allNotes[0];
+      const latestNote = allNotes[allNotes.length - 1];
+      
+      console.log("Earliest note starts at (ms):", earliestNote.startTime);
+      console.log("Latest note starts at (ms):", latestNote.startTime);
+      console.log("MIDI time range (ms):", latestNote.startTime - earliestNote.startTime);
     }
   }, [midiData]);
   
@@ -311,19 +330,16 @@ const NotesVisualizer = memo(function NotesVisualizer({
     // Sort notes by start time to handle overlaps correctly
     const sortedNotes = [...notes].sort((a, b) => a.startTime - b.startTime);
     
-    // Count notes that are shown and skipped for debugging
-    let shownNotes = 0;
-    let skippedNotes = 0;
+    // Optimize rendering by only processing notes that will be visible
+    const visibleNotes = sortedNotes.filter(note => 
+      note.endTime >= adjustedTime - 2000 && note.startTime <= adjustedTime + timeWindow
+    );
     
-    sortedNotes.forEach(note => {
-      // Use a wider window to avoid missing notes (2000ms in the past, lookahead in the future)
-      if (note.endTime < adjustedTime - 2000 || note.startTime > adjustedTime + timeWindow) {
-        skippedNotes++;
-        return;
-      }
-      
-      shownNotes++;
-      
+    // Count notes that are shown for debugging
+    let shownNotes = visibleNotes.length;
+    let skippedNotes = sortedNotes.length - visibleNotes.length;
+    
+    visibleNotes.forEach(note => {
       // Get position from key positions map
       const keyInfo = keyPositions[note.note];
       
@@ -346,58 +362,61 @@ const NotesVisualizer = memo(function NotesVisualizer({
       // Also check if this note is being played via MIDI
       const isPlayedViaMidi = playedMidiNotesRef.current.includes(note.note);
       
-      // Draw the note
-      ctx.beginPath();
-      
-      // Draw a rounded rectangle
-      const radius = 5;
-      const left = x - width / 2;
-      const right = x + width / 2;
-      const top = Math.min(endY, startY - noteHeight);
-      const bottom = startY;
-      
       // Only draw if at least part of the note is visible
-      if (!(bottom < 0 || top > height)) {
-        // Set colors based on note type and state
-        if (isActive || isPlayedViaMidi) {
-          // Glowing active note
-          ctx.fillStyle = isBlack ? '#00d9e8' : '#00d9e8';
-          ctx.shadowColor = '#00d9e8';
-          ctx.shadowBlur = 10;
-        } else {
-          // Regular note
-          ctx.fillStyle = isBlack ? '#333' : '#fff';
-          ctx.shadowBlur = 0;
-        }
+      if (!(startY < 0 || endY > height)) {
+        // Draw the note
+        ctx.beginPath();
         
-        ctx.strokeStyle = isBlack ? '#555' : '#e3e3e3';
-        ctx.lineWidth = 1;
+        // Draw a rounded rectangle
+        const radius = 5;
+        const left = x - width / 2;
+        const right = x + width / 2;
+        const top = Math.min(endY, startY - noteHeight);
+        const bottom = startY;
         
-        // Draw rounded rectangle
-        ctx.moveTo(left + radius, top);
-        ctx.lineTo(right - radius, top);
-        ctx.quadraticCurveTo(right, top, right, top + radius);
-        ctx.lineTo(right, bottom - radius);
-        ctx.quadraticCurveTo(right, bottom, right - radius, bottom);
-        ctx.lineTo(left + radius, bottom);
-        ctx.quadraticCurveTo(left, bottom, left, bottom - radius);
-        ctx.lineTo(left, top + radius);
-        ctx.quadraticCurveTo(left, top, left + radius, top);
-        
-        ctx.fill();
-        ctx.stroke();
-        
-        // Remove shadow effect to avoid affecting other drawings
-        ctx.shadowBlur = 0;
-        
-        // Add a highlight line to the top of active notes
-        if (isActive) {
-          ctx.strokeStyle = '#ffffff';
-          ctx.lineWidth = 2;
-          ctx.beginPath();
-          ctx.moveTo(left + 2, bottom);
-          ctx.lineTo(right - 2, bottom);
+        // Only draw if at least part of the note is visible
+        if (!(bottom < 0 || top > height)) {
+          // Set colors based on note type and state
+          if (isActive || isPlayedViaMidi) {
+            // Glowing active note
+            ctx.fillStyle = isBlack ? '#00d9e8' : '#00d9e8';
+            ctx.shadowColor = '#00d9e8';
+            ctx.shadowBlur = 10;
+          } else {
+            // Regular note
+            ctx.fillStyle = isBlack ? '#333' : '#fff';
+            ctx.shadowBlur = 0;
+          }
+          
+          ctx.strokeStyle = isBlack ? '#555' : '#e3e3e3';
+          ctx.lineWidth = 1;
+          
+          // Draw rounded rectangle
+          ctx.moveTo(left + radius, top);
+          ctx.lineTo(right - radius, top);
+          ctx.quadraticCurveTo(right, top, right, top + radius);
+          ctx.lineTo(right, bottom - radius);
+          ctx.quadraticCurveTo(right, bottom, right - radius, bottom);
+          ctx.lineTo(left + radius, bottom);
+          ctx.quadraticCurveTo(left, bottom, left, bottom - radius);
+          ctx.lineTo(left, top + radius);
+          ctx.quadraticCurveTo(left, top, left + radius, top);
+          
+          ctx.fill();
           ctx.stroke();
+          
+          // Remove shadow effect to avoid affecting other drawings
+          ctx.shadowBlur = 0;
+          
+          // Add a highlight line to the top of active notes
+          if (isActive) {
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(left + 2, bottom);
+            ctx.lineTo(right - 2, bottom);
+            ctx.stroke();
+          }
         }
       }
     });

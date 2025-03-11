@@ -2,6 +2,10 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import styles from './StylishPiano.module.css';
 
+// Piano configuration constants moved outside the component
+const START_NOTE = 36; // C2
+const KEY_COUNT = 60; // 5 octaves (12 notes per octave * 5)
+
 export default function StylishPiano({ 
   midiData, 
   currentTime = 0, 
@@ -21,67 +25,32 @@ export default function StylishPiano({
   const blackKeysRef = useRef({});
   const containerRef = useRef(null);
   
-  // Piano configuration - 5 octaves
-  const startNote = 36; // C2
-  const keyCount = 60; // 5 octaves (12 notes per octave * 5)
+  // Piano configuration reference - now using constants from outside
+  const startNote = START_NOTE;
+  const keyCount = KEY_COUNT;
   
-  // Process MIDI data when it changes (similar to NotesVisualizer)
+  // Process MIDI data when it changes - adapted for Tone.js format
   useEffect(() => {
     if (!midiData) return;
     
-    // Extract all note-on and note-off events
-    const allEvents = midiData.track.flatMap(track => 
-      track.event.filter(event => event.type === 9 || event.type === 8)
-    );
+    // Extract all notes from all tracks
+    const allNotes = [];
     
-    // Calculate absolute time for each event
-    let absoluteEvents = [];
-    let currentAbsoluteTime = 0;
-    
-    allEvents.forEach(event => {
-      currentAbsoluteTime += event.deltaTime;
-      absoluteEvents.push({
-        ...event,
-        absoluteTime: currentAbsoluteTime,
-        isNoteOn: event.type === 9 && event.data[1] > 0,
-        note: event.data[0],
-        velocity: event.data[1]
-      });
-    });
-    
-    // Match note-on with note-off events to create note objects
-    const notes = [];
-    const activeNotes = {};
-    
-    absoluteEvents.forEach(event => {
-      const noteId = event.note;
-      
-      if (event.isNoteOn) {
-        // Start of note
-        activeNotes[noteId] = {
-          note: noteId,
-          velocity: event.velocity,
-          startTime: event.absoluteTime,
-          endTime: null
-        };
-      } else {
-        // End of note
-        if (activeNotes[noteId]) {
-          const note = activeNotes[noteId];
-          note.endTime = event.absoluteTime;
-          notes.push(note);
-          delete activeNotes[noteId];
-        }
+    midiData.tracks.forEach(track => {
+      if (track.notes && track.notes.length > 0) {
+        track.notes.forEach(note => {
+          // Convert Tone.js time (seconds) to milliseconds for consistency
+          allNotes.push({
+            note: note.midi, // MIDI note number
+            velocity: note.velocity * 127, // Convert 0-1 to 0-127
+            startTime: note.time * 1000, // Convert to ms
+            endTime: (note.time + note.duration) * 1000, // Convert to ms
+          });
+        });
       }
     });
     
-    // Add any notes that didn't have a note-off event
-    Object.values(activeNotes).forEach(note => {
-      note.endTime = note.startTime + 1000; // Default duration
-      notes.push(note);
-    });
-    
-    setProcessedMidiData(notes);
+    setProcessedMidiData(allNotes);
   }, [midiData]);
   
   // Update active keys and note info based on current time and external MIDI input
@@ -347,7 +316,7 @@ function getBlackKeyPosition(midiNote) {
   const whiteKeysPerOctave = 7;
   
   // Calculate width percentage for each white key (distribute evenly)
-  const whiteKeyWidth = 100 / (keyCount - getBlackKeyCount(36, 36 + 60));
+  const whiteKeyWidth = 100 / (KEY_COUNT - getBlackKeyCount(36, 36 + 60));
   
   // Find position within the octave
   const noteInOctave = midiNote % 12;
@@ -391,13 +360,10 @@ function getBlackKeyCount(startNote, endNote) {
   return count;
 }
 
-// Novo helper para obter nome da nota com oitava mais completo
+// Helper to get note name with octave
 function getNoteNameWithOctave(midiNote) {
   const noteNames = ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B'];
   const octave = Math.floor(midiNote / 12) - 1;
   const noteName = noteNames[midiNote % 12];
   return `${noteName}${octave}`;
 }
-
-// For the positioning calculation
-const keyCount = 60; // 5 octaves
