@@ -7,9 +7,11 @@ export default function MidiDeviceConnector({
   isOpen, 
   onClose, 
   onMidiConnect, 
-  onMidiMessage 
+  onMidiMessage,
+  isMidiSoundEnabled // New prop for controlling MIDI sound output
 }) {
   const [midiAccess, setMidiAccess] = useState(null);
+  const [midiEnable, setMidiEnable] = useState(false);
   const [midiInputs, setMidiInputs] = useState([]);
   const [selectedInput, setSelectedInput] = useState(null);
   const [connectionStatus, setConnectionStatus] = useState('disconnected'); // 'disconnected', 'connecting', 'connected'
@@ -20,7 +22,13 @@ export default function MidiDeviceConnector({
   const soundfontPlayerRef = useRef(null);
   const activeNotesRef = useRef({});
   const audioContextRef = useRef(null);
+  // Add a ref to track current midiEnable value to avoid closure issues
+  const midiEnableRef = useRef(false);
   
+  useEffect(() => {
+    setMidiEnable(isMidiSoundEnabled);
+    midiEnableRef.current = isMidiSoundEnabled;
+  },[isMidiSoundEnabled]);
   // Inicializa o AudioContext e carrega o instrumento assim que o componente montar
   useEffect(() => {
     // Criar AudioContext se não existir independentemente se o modal está aberto
@@ -176,6 +184,9 @@ export default function MidiDeviceConnector({
     }
     
     if (onMidiConnect) {
+      setMidiEnable(true);
+      // Update the ref to reflect the new state
+      midiEnableRef.current = true;
       onMidiConnect(true, input.name);
     }
   };
@@ -208,9 +219,9 @@ export default function MidiDeviceConnector({
       channel: channel,
       data: [noteNumber, velocity]
     };
-
-    // Use SoundFont player to play notes
-    if (soundfontPlayerRef.current) {
+    
+    // Use SoundFont player to play notes only if sound is enabled - use ref instead of state
+    if (soundfontPlayerRef.current && midiEnableRef.current) {
       try {
         // Verificar e resumir o contexto de áudio antes de tocar
         if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
@@ -254,7 +265,7 @@ export default function MidiDeviceConnector({
       }
     }
 
-    // Pass the formatted event to the callback
+    // Always pass the event to the callback, even if sound is disabled
     if (onMidiMessage) {
       onMidiMessage(formattedEvent);
     }
@@ -277,6 +288,9 @@ export default function MidiDeviceConnector({
     activeNotesRef.current = {};
     
     if (onMidiConnect) {
+      setMidiEnable(false);
+      // Update the ref to match the state
+      midiEnableRef.current = false;
       onMidiConnect(false);
     }
   };

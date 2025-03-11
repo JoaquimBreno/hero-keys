@@ -1,153 +1,134 @@
 .audioPlayer {
-    width: 100%;
-    padding: 10px;
-    border-radius: 8px;
-  }
-  
-  .playerInfo {
-    margin-bottom: 12px;
-  }
-  
-  .fileName {
-    font-size: 14px;
-    font-weight: 600;
-    color:  #ffffff;
-  }
-  
-  .playerControls {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-  }
-  
-  .playButton {
-      width: 36px;
-      height: 36px;
-      border-radius: 50%;
-      background: #00d9e8;
-      color: white;
-      border: none;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 14px;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      box-shadow: 0 2px 5px rgba(0, 217, 232, 0.3);
-    }
+  width: 100%;
+  padding: 10px;
+  border-radius: 8px;
+  background-color: #121212;
+  color: #fff;
+}
 
-.playButton:hover {
-    background: #00c6d4;
-    transform: scale(1.05);
+.playerInfo {
+  margin-bottom: 12px;
+}
+
+.fileName {
+  font-size: 14px;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.playerControls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.playButton, .controlButton, .toggleButton {
+  width: 30px;
+  height: 30px;
+  background-color: #333;
+  border-radius: 4px;
+  color: white;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.playButton:hover, .controlButton:hover, .toggleButton:hover {
+  background-color: #444;
 }
 
 .pauseButton {
-    font-size: 12px;
+  font-size: 12px;
+}
+
+.activeMute, .midiSoundDisabled {
+  background-color: #e74c3c;
+}
+
+.activeMute:hover, .midiSoundDisabled:hover {
+  background-color: #c0392b;
 }
 
 .timeInfo {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    gap: 10px;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  position: relative;
 }
 
 .currentTime, .duration {
-    font-size: 12px;
-    color: #fefefe;
-    font-weight: 500;
-    min-width: 35px;
+  font-size: 12px;
+  color: #fefefe;
+  font-weight: 500;
+  min-width: 35px;
 }
 
+/* Container for the custom seek bar */
+.seekBarContainer {
+  flex: 1;
+  position: relative;
+  height: 4px;
+  background-color: #333;
+  border-radius: 2px;
+  cursor: pointer;
+}
+
+/* Progress bar with gradient */
+.seekBarProgress {
+  position: absolute;
+  height: 100%;
+  background-image: linear-gradient(90deg, #00dae8, #0affa7);
+  border-radius: 2px;
+  pointer-events: none;
+}
+
+/* Thumb of the seek bar */
+.seekBarThumb {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  background-color: #00e5c7;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+/* Hide the default range input but keep it functional */
 .seekBar {
-    flex: 1;
-    height: 5px;  /* Fixed the missing value */
-    -webkit-appearance: none;
-    appearance: none;
-    background: #e0e0e0;
-    border-radius: 3px;
-    outline: none;
-    cursor: pointer;
-}
-
-.seekBar::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    appearance: none;
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    background: #00d9e8;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-    margin-top: -4px; /* Added negative margin to position the thumb higher */
-}
-
-.seekBar::-webkit-slider-thumb:hover {
-    transform: scale(1.2);
-    background: #00c6d4;
-}
-
-.seekBar::-moz-range-thumb {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    background: #00d9e8;
-    cursor: pointer;
-    border: none;
-    transition: all 0.2s ease;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-    margin-top: -4px; /* Added negative margin to position the thumb higher */
-}
-
-.seekBar::-moz-range-thumb:hover {
-    transform: scale(1.2);
-    background: #00c6d4;
-}
-
-.seekBar::-webkit-slider-runnable-track {
-    height: 5px;
-    border-radius: 3px;
-}
-
-.seekBar::-moz-range-track {
-    height: 5px;
-    border-radius: 3px;
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  z-index: 2;
+  margin: 0;
+  padding: 0;
 }
 
 .toggleButton {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    background: #9b59b6;
-    color: white;
-    border: none;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 18px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    box-shadow: 0 2px 5px rgba(155, 89, 182, 0.3);
-}
-
-.toggleButton:hover {
-    background: #8e44ad;
-    transform: scale(1.05);
+  background: #333;
 }
 
 .sheetMusicActive {
-    background: #3498db;
+  background: #00e5c7;
 }
 
 .sheetMusicActive:hover {
-    background: #2980b9;
+  background: #00c6b5;
 }
 
 .tablatureActive {
-    background: #e67e22;
+  background: #e67e22;
 }
 
 .tablatureActive:hover {
-    background: #d35400;
+  background: #d35400;
 }

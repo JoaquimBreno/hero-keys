@@ -7,17 +7,20 @@ export default function AudioPlayer({
   onTimeUpdate, 
   fileName, 
   onVisualizerToggle, 
-  showSheetMusic
-  // Removed onMidiSoundToggle and isMidiSoundEnabled props
+  showSheetMusic,
+  onMidiSoundToggle, // New prop to handle MIDI sound toggling
+  isMidiSoundEnabled // New prop to track MIDI sound state
 }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [displayTime, setDisplayTime] = useState(0); // For display purposes only
   const [duration, setDuration] = useState(0);
   const [isMuted, setIsMuted] = useState(false); // New state for tracking mute status
+  const [progressPercent, setProgressPercent] = useState(0);
   const audioRef = useRef(null);
   const currentTimeRef = useRef(0); // Store current time in ref to avoid re-renders
   const seekingRef = useRef(false); // Track when user is manually seeking
   const animationFrameRef = useRef(null);
+  const seekBarContainerRef = useRef(null);
   
   // Initialize audio with the provided data
   useEffect(() => {
@@ -64,6 +67,7 @@ export default function AudioPlayer({
         
         // Only update display time (less frequent) to avoid re-renders
         setDisplayTime(time); 
+        setProgressPercent((time / audioRef.current.duration) * 100);
         
         // Always report current time to parent for synchronization
         // even for small changes to ensure precise note visualization
@@ -103,10 +107,12 @@ export default function AudioPlayer({
     }
   };
   
-  // Removed handleMidiSoundToggle function
-  
-  // No longer need timeUpdate event handler
-  // The animation frame handles this more efficiently
+  // New function to handle MIDI sound toggle
+  const handleMidiSoundToggle = () => {
+    if (onMidiSoundToggle) {
+      onMidiSoundToggle(!isMidiSoundEnabled);
+    }
+  };
   
   // Handle seek - fixed to prevent infinite loop
   const handleSeek = (e) => {
@@ -115,6 +121,7 @@ export default function AudioPlayer({
     const seekTime = parseFloat(e.target.value);
     currentTimeRef.current = seekTime;
     setDisplayTime(seekTime);
+    setProgressPercent((seekTime / duration) * 100);
     
     if (audioRef.current) {
       audioRef.current.currentTime = seekTime;
@@ -165,23 +172,43 @@ export default function AudioPlayer({
           aria-label={isMuted ? 'Unmute' : 'Mute'}
           title={isMuted ? 'Unmute' : 'Mute'}
         >
-          {isMuted ? '🔇' : '🔊'}
+          M
         </button>
         
-        {/* Removed MIDI sound toggle button */}
+        {/* New MIDI sound toggle button */}
+        {onMidiSoundToggle && (
+          <button
+            className={`${styles.controlButton} ${!isMidiSoundEnabled ? styles.midiSoundDisabled : ''}`}
+            onClick={handleMidiSoundToggle}
+            aria-label={isMidiSoundEnabled ? 'Disable MIDI Sound' : 'Enable MIDI Sound'}
+            title={isMidiSoundEnabled ? 'Disable MIDI Sound' : 'Enable MIDI Sound'}
+          >
+            {isMidiSoundEnabled ? '🎹' : '🔇'}
+          </button>
+        )}
         
         <div className={styles.timeInfo}>
           <span className={styles.currentTime}>{formatTime(displayTime)}</span>
           
-          <input
-            type="range"
-            className={styles.seekBar}
-            min="0"
-            max={duration || 0}
-            step="0.01"
-            value={displayTime}
-            onChange={handleSeek}
-          />
+          <div className={styles.seekBarContainer} ref={seekBarContainerRef}>
+            <div 
+              className={styles.seekBarProgress} 
+              style={{ width: `${progressPercent}%` }}
+            ></div>
+            <div 
+              className={styles.seekBarThumb} 
+              style={{ left: `${progressPercent}%` }}
+            ></div>
+            <input
+              type="range"
+              className={styles.seekBar}
+              min="0"
+              max={duration || 0}
+              step="0.01"
+              value={displayTime}
+              onChange={handleSeek}
+            />
+          </div>
           
           <span className={styles.duration}>{formatTime(duration)}</span>
         </div>
