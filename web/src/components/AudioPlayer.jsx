@@ -1,26 +1,57 @@
 // AudioPlayer.jsx
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, forwardRef, useImperativeHandle } from 'react';
 import styles from './AudioPlayer.module.css';
 
-export default function AudioPlayer({ 
+const AudioPlayer = forwardRef(({ 
   audioData, 
   onTimeUpdate, 
   fileName, 
   onVisualizerToggle, 
   showSheetMusic,
-  onMidiSoundToggle, // New prop to handle MIDI sound toggling
-  isMidiSoundEnabled // New prop to track MIDI sound state
-}) {
+  onMidiSoundToggle,
+  isMidiSoundEnabled,
+  onChordCarouselToggle,
+  showChordCarousel
+}, ref) => {
   const [isPlaying, setIsPlaying] = useState(false);
-  const [displayTime, setDisplayTime] = useState(0); // For display purposes only
+  const [displayTime, setDisplayTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [isMuted, setIsMuted] = useState(false); // New state for tracking mute status
+  const [isMuted, setIsMuted] = useState(false);
   const [progressPercent, setProgressPercent] = useState(0);
   const audioRef = useRef(null);
-  const currentTimeRef = useRef(0); // Store current time in ref to avoid re-renders
-  const seekingRef = useRef(false); // Track when user is manually seeking
+  const currentTimeRef = useRef(0);
+  const seekingRef = useRef(false);
   const animationFrameRef = useRef(null);
   const seekBarContainerRef = useRef(null);
+  
+  // Expose seekToTime function to parent components
+  useImperativeHandle(ref, () => ({
+    seekToTime: (timeInMs) => {
+      seekToTime(timeInMs);
+    }
+  }));
+  
+  // Function to seek to a specific time in milliseconds
+  const seekToTime = (timeInMs) => {
+    seekingRef.current = true;
+    
+    const seekTimeInSeconds = timeInMs / 1000;
+    currentTimeRef.current = seekTimeInSeconds;
+    setDisplayTime(seekTimeInSeconds);
+    setProgressPercent((seekTimeInSeconds / duration) * 100);
+    
+    if (audioRef.current) {
+      audioRef.current.currentTime = seekTimeInSeconds;
+    }
+    
+    // Schedule the seeking flag to be released
+    setTimeout(() => {
+      seekingRef.current = false;
+      if (onTimeUpdate) {
+        onTimeUpdate(timeInMs);
+      }
+    }, 50);
+  };
   
   // Initialize audio with the provided data
   useEffect(() => {
@@ -116,25 +147,8 @@ export default function AudioPlayer({
   
   // Handle seek - fixed to prevent infinite loop
   const handleSeek = (e) => {
-    seekingRef.current = true; // Set seeking flag to prevent update loop
-    
     const seekTime = parseFloat(e.target.value);
-    currentTimeRef.current = seekTime;
-    setDisplayTime(seekTime);
-    setProgressPercent((seekTime / duration) * 100);
-    
-    if (audioRef.current) {
-      audioRef.current.currentTime = seekTime;
-    }
-    
-    // Schedule the seeking flag to be released
-    setTimeout(() => {
-      seekingRef.current = false;
-      // Update one more time after seeking ends
-      if (onTimeUpdate) {
-        onTimeUpdate(seekTime * 1000);
-      }
-    }, 50);
+    seekToTime(seekTime * 1000); // Convert to milliseconds for consistency
   };
   
   // Format time as mm:ss
@@ -224,7 +238,21 @@ export default function AudioPlayer({
             {showSheetMusic ? '🎹' : '🎼'}
           </button>
         )}
+        
+        {/* Add toggle button for chord carousel if available */}
+        {onChordCarouselToggle && (
+          <button
+            className={`${styles.toggleButton} ${showChordCarousel ? styles.chordsActive : ''}`}
+            onClick={onChordCarouselToggle}
+            aria-label={showChordCarousel ? 'Hide Chords' : 'Show Chords'}
+            title={showChordCarousel ? 'Hide Chords' : 'Show Chords'}
+          >
+            {showChordCarousel ? 'C' : '🎵'}
+          </button>
+        )}
       </div>
     </div>
   );
-}
+});
+
+export default AudioPlayer;

@@ -86,6 +86,9 @@ export default function StylishPiano({
     if (!containerRef.current || !onKeyPositionsUpdate) return;
     
     const measureKeyPositions = () => {
+      // Ensure containerRef is still valid when this function runs
+      if (!containerRef.current) return;
+      
       // Get container position for relative calculations
       const containerRect = containerRef.current.getBoundingClientRect();
       const positions = {};
@@ -117,14 +120,25 @@ export default function StylishPiano({
       onKeyPositionsUpdate(positions);
     };
     
-    // Initial measurement after rendering
-    setTimeout(measureKeyPositions, 100);
+    // Initial measurement after rendering with a safety check
+    const timeoutId = setTimeout(() => {
+      if (containerRef.current) {
+        measureKeyPositions();
+      }
+    }, 100);
     
-    // Remeasure on window resize
-    window.addEventListener('resize', measureKeyPositions);
+    // Remeasure on window resize with safety
+    const handleResize = () => {
+      if (containerRef.current) {
+        measureKeyPositions();
+      }
+    };
+    
+    window.addEventListener('resize', handleResize);
     
     return () => {
-      window.removeEventListener('resize', measureKeyPositions);
+      clearTimeout(timeoutId);
+      window.removeEventListener('resize', handleResize);
     };
   }, [onKeyPositionsUpdate]);
   
