@@ -1,4 +1,8 @@
-import PianoVisualizer from '@/components/PianoVisualizer.jsx';
+// FILE: page.js
+'use client';
+import React from 'react';
+//import PianoVisualizer from '@/components/PianoVisualizer.jsx';
+import PianoVisualizer2 from '@/components/PianoVisualizer2.jsx';
 
 export default function Home() {
   return (
@@ -7,9 +11,10 @@ export default function Home() {
         <div className="logo">🎹 HeroKeys 🎹</div>
         <p>Visualize suas músicas MIDI com animações elegantes em estilo neon</p>
       </header>
-      
-      <PianoVisualizer />
-      
+
+      <PianoVisualizer2/>
+      {/* <PianoVisualizer /> */}
+
       <footer>
         <p>© {new Date().getFullYear()} Moises Inc. Todos os direitos reservados</p>
       </footer>
