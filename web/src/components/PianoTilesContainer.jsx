@@ -18,9 +18,11 @@ export default function PianoTilesContainer({ midiData, fileName, audioData, aut
   const [midiDeviceName, setMidiDeviceName] = useState('');
   const [playedMidiNotes, setPlayedMidiNotes] = useState([]);
   const [initialMidiPromptDone, setInitialMidiPromptDone] = useState(false);
+  const [isMidiSoundEnabled, setIsMidiSoundEnabled] = useState(true); // New state for MIDI sound
   const containerRef = useRef(null);
   const timeUpdateRef = useRef(null);
   const midiDataLoadedRef = useRef(false);
+  
   
   // Detectar quando o midiData foi carregado pela primeira vez
   useEffect(() => {
@@ -68,19 +70,22 @@ export default function PianoTilesContainer({ midiData, fileName, audioData, aut
   
   // Handle note plays from the piano
   const handleNotePlay = useCallback((midiEvent) => {
-    // Filter notes outside the valid range (36-95)
-    if (midiEvent.data[0] >= 36 && midiEvent.data[0] <= 95) {
-      setPlayedMidiNotes(prev => {
-        if (midiEvent.type === 9 && midiEvent.data[1] > 0) {
-          // Note on event
-          return [...prev.filter(note => note !== midiEvent.data[0]), midiEvent.data[0]];
-        } else {
-          // Note off event
-          return prev.filter(note => note !== midiEvent.data[0]);
-        }
-      });
+    // Only process notes if MIDI sound is enabled
+    if (isMidiSoundEnabled) {
+      // Filter notes outside the valid range (36-95)
+      if (midiEvent.data[0] >= 36 && midiEvent.data[0] <= 95) {
+        setPlayedMidiNotes(prev => {
+          if (midiEvent.type === 9 && midiEvent.data[1] > 0) {
+            // Note on event
+            return [...prev.filter(note => note !== midiEvent.data[0]), midiEvent.data[0]];
+          } else {
+            // Note off event
+            return prev.filter(note => note !== midiEvent.data[0]);
+          }
+        });
+      }
     }
-  }, []);
+  }, [isMidiSoundEnabled]);
   
   // Handle key position updates from the piano component
   const handleKeyPositionsUpdate = useCallback((positions) => {
@@ -111,6 +116,16 @@ export default function PianoTilesContainer({ midiData, fileName, audioData, aut
   const handleMidiMessage = useCallback((midiEvent) => {
     handleNotePlay(midiEvent);
   }, [handleNotePlay]);
+  
+  // Handle MIDI sound toggle
+  const handleMidiSoundToggle = useCallback((enabled) => {
+    setIsMidiSoundEnabled(enabled);
+    
+    // If disabling sound, clear any currently played notes
+    if (!enabled) {
+      setPlayedMidiNotes([]);
+    }
+  }, []);
   
   // Fechar modal de MIDI
   const handleCloseModal = useCallback(() => {
@@ -168,7 +183,7 @@ export default function PianoTilesContainer({ midiData, fileName, audioData, aut
           </button>
         </div>
         
-        {/* Audio player with visualizer toggle */}
+        {/* Audio player with visualizer toggle and MIDI sound toggle */}
         <div className={styles.playerSection}>
           <AudioPlayer 
             audioData={audioData}
@@ -176,6 +191,8 @@ export default function PianoTilesContainer({ midiData, fileName, audioData, aut
             fileName={fileName}
             onVisualizerToggle={handleVisualizerToggle}
             showSheetMusic={showSheetMusic}
+            onMidiSoundToggle={handleMidiSoundToggle}
+            isMidiSoundEnabled={isMidiSoundEnabled}
           />
         </div>
       </div>
@@ -186,6 +203,7 @@ export default function PianoTilesContainer({ midiData, fileName, audioData, aut
         onClose={handleCloseModal}
         onMidiConnect={handleMidiConnect}
         onMidiMessage={handleMidiMessage}
+        isMidiSoundEnabled={isMidiSoundEnabled}
       />
     </div>
   );
