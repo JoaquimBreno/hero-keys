@@ -4,7 +4,6 @@ import Script from 'next/script';
 import styles from './PianoVisualizer.module.css';
 import MIDIParser from 'midi-parser-js';
 import PianoTilesContainer from './PianoTilesContainer';
-import { processMIDIFile } from '@/lib/simplify';
 
 export default function PianoVisualizer() {
   const dropZoneRef = useRef(null);
@@ -13,15 +12,154 @@ export default function PianoVisualizer() {
   const [isDragging, setIsDragging] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
   const [fileName, setFileName] = useState('');
-  const [midiLoaded, setMidiLoaded] = useState(null);
+  const [midiLoaded, setMidiLoaded] = useState(null);  
+  const [chordsData, setChordsData] = useState(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [audioFile, setAudioFile] = useState(null);
+  const [loading, setLoading] = useState(false);
+  
+  // Secret dev mode function to load mock files from public directory
+  const loadDevMockFiles = async () => {
+    setLoading(true);
+    setFileName('devinteste.mp3');
+    const audioUrl = '/devinteste.mp3';
+    
+    try {
+      // Fetch the audio file from public directory
+      const audioResponse = await fetch(audioUrl);
+      const audioArrayBuffer = await audioResponse.arrayBuffer();
+      const audioBlob = new Blob([audioArrayBuffer], { type: 'audio/mp3' });
+      const audioObjectUrl = URL.createObjectURL(audioBlob);
+      
+      // Fetch the MIDI file from public directory
+      const midiResponse = await fetch('/devinteste.mid');
+      const midiArrayBuffer = await midiResponse.arrayBuffer();
+      const midiUint8Array = new Uint8Array(midiArrayBuffer);
+      
+      if (typeof MIDIParser !== 'undefined') {
+        // Parse the MIDI data
+        const midiFile = MIDIParser.parse(midiUint8Array);
+        console.log('Dev mock MIDI file parsed:', midiFile);
+        
+        setIsTransitioning(true);
+        
+        setTimeout(() => {
+          setMidiLoaded(midiFile);
+          setAudioFile(audioObjectUrl);
+          
+          // End transition after a delay
+          setTimeout(() => {
+            setIsTransitioning(false);
+          }, 300);
+        }, 500);
+      } else {
+        console.error('MIDIParser not loaded for mock data');
+        alert('Erro: parser MIDI não carregado. Por favor, atualize a página e tente novamente.');
+      }
+    } catch (error) {
+      console.error('Error loading mock files:', error);
+      alert('Erro ao carregar arquivos de teste.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Handle MIDI Parser script load
   const handleScriptLoad = () => {
     console.log('MIDI Parser script loaded');
     setIsLoaded(true);
   };
+
+  const base64ToBlob = (base64Data) => {
+    // Remove data URL prefix if present
+    const base64WithoutPrefix = base64Data.includes('base64,') 
+      ? base64Data.split('base64,')[1] 
+      : base64Data;
+      
+    const byteCharacters = atob(base64WithoutPrefix);
+    const byteNumbers = new Array(byteCharacters.length);
+    
+    for (let i = 0; i < byteCharacters.length; i++) {
+      byteNumbers[i] = byteCharacters.charCodeAt(i);
+    }
+    
+    const byteArray = new Uint8Array(byteNumbers);
+    return new Blob([byteArray], { type: 'audio/mp3' });
+  };
+
+  // Converte o áudio para base64 e envia para a rota /api/processAudio
+  function uploadFileToApi(file) {
+    setLoading(true);
+    const reader = new FileReader();
+
+    reader.onload = async () => {
+      const base64Data = reader.result;
+      try {
+        const res = await fetch('/api/processAudio', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ audioBase64: base64Data })
+        });
+        
+        // Recupera tanto o MIDI quanto os dados de acordes
+        const responseData = await res.json();
+        const { midiBase64, chords, pianoOutputBuffer } = responseData;
+        
+        if (!midiBase64) {
+          throw new Error('MIDI data not received from server');
+        }
+        
+        // Armazena os dados de acordes
+        if (chords) {
+          setChordsData(chords);
+        }
+        
+        if (typeof MIDIParser !== 'undefined') {
+          try {
+            const midiFile = MIDIParser.parse(midiBase64);
+            console.log('MIDI file parsed:', midiFile);
+            
+            setIsTransitioning(true);
+            setTimeout(() => { 
+              setMidiLoaded(midiFile);
+              if (pianoOutputBuffer) {
+                const audioBlob = base64ToBlob(pianoOutputBuffer);
+                const audioUrl = URL.createObjectURL(audioBlob);
+                setAudioFile(audioUrl); // Now audioFile will be a playable URL
+              }
+              else{
+                setAudioFile(file);
+              }
+              
+              // End transition after a delay
+              setTimeout(() => {
+                setIsTransitioning(false);
+              }, 300);
+            }, 500);
+            
+          } catch (parseError) {
+            console.error('Error parsing MIDI data:', parseError);
+            alert('Erro ao analisar o arquivo MIDI. Por favor, tente novamente.');
+          }
+        } else {
+          console.error('MIDIParser not loaded');
+          alert('Erro: parser MIDI não carregado. Por favor, atualize a página e tente novamente.');
+        }
+      } catch (error) {
+        console.error("Erro ao processar o arquivo MIDI:", error);
+        alert('Ocorreu um erro ao processar o arquivo de áudio.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    reader.onerror = (error) => {
+      console.error('Erro ao converter o arquivo.', error);
+      setLoading(false);
+    };
+
+    reader.readAsDataURL(file);
+  }
   
   // Effect for handling drag and drop
   useEffect(() => {
@@ -60,46 +198,12 @@ export default function PianoVisualizer() {
       if (files.length > 0) {
         const file = files[0];
         
-        // Check if file is MIDI
-        if (file.name.endsWith('.mid') || file.name.endsWith('.midi')) {
+        // Check if file is audio
+        if (file.type.startsWith('audio/')) {
           setFileName(file.name);
-          
-          // Read file
-          const reader = new FileReader();
-          reader.onload = function(e) {
-            try {
-              const arrayBuffer = e.target.result;
-              const byteArray = new Uint8Array(arrayBuffer);
-              
-              // Make sure MIDIParser is available
-              if (typeof MIDIParser !== 'undefined') {
-                let midiFile = MIDIParser.parse(byteArray);
-                console.log('MIDI file parsed:', midiFile);
-                
-                setIsTransitioning(true);
-                // For now, just log the tracks
-                if (midiFile && midiFile.track) {
-                  setTimeout(() => {
-                    setMidiLoaded(midiFile);
-                    console.log(`Loaded ${midiFile.track.length} tracks`);
-                    // End transition after a delay
-                    setTimeout(() => {
-                      setIsTransitioning(false);
-                    }, 300);
-                  }, 500);
-                }
-              } else {
-                console.error('MIDIParser not loaded');
-                alert('Error: MIDI parser not loaded. Please refresh and try again.');
-              }
-            } catch (error) {
-              console.error('Error processing MIDI file:', error);
-              alert('Error processing MIDI file. Please try another file.');
-            }
-          };
-          reader.readAsArrayBuffer(file);
+          uploadFileToApi(file);
         } else {
-          alert('Por favor, selecione um arquivo MIDI válido (.mid ou .midi)');
+          alert('Por favor, selecione um arquivo de áudio válido (.mp3, .wav, etc.)');
         }
       }
     };
@@ -107,6 +211,8 @@ export default function PianoVisualizer() {
     // Handle file input change
     const handleFileInputChange = () => {
       handleFiles(fileInput.files);
+      // Reset the input so the same file can be selected again
+      fileInput.value = '';
     };
     
     // Add event listeners
@@ -144,7 +250,7 @@ export default function PianoVisualizer() {
       dropZone.removeEventListener('drop', handleDrop, false);
       fileInput.removeEventListener('change', handleFileInputChange, false);
     };
-  }, [isLoaded, midiLoaded]);
+  }, [isLoaded, midiLoaded]); // Add midiLoaded as a dependency to re-attach listeners
 
   // Effect for rendering piano visualization when MIDI is loaded
   useEffect(() => {
@@ -154,42 +260,68 @@ export default function PianoVisualizer() {
     }
   }, [midiLoaded]);
 
-  useEffect(() => {
-    // Função para carregar o arquivo de áudio mockado
-    const loadMockAudio = async () => {
-      try {
-        // Caminho para o arquivo de áudio na pasta pública
-        const audioUrl = 'soltaacarta.mp3'; // Ajuste o caminho conforme necessário
-        
-        // Buscar o arquivo
-        const response = await fetch(audioUrl);
-        if (!response.ok) {
-          throw new Error(`Failed to fetch audio: ${response.statusText}`);
-        }
-        
-        // Converter para blob
-        const blob = await response.blob();
-        
-        // Criar um objeto File a partir do blob
-        const file = new File([blob], 'soltaacarta.mp3', { type: 'audio/mpeg' });
-        
-        // Armazenar o arquivo
-        setAudioFile(file);
-        console.log('Mock audio file loaded:', file);
-      } catch (error) {
-        console.error('Error loading mock audio:', error);
-      }
-    };
-    
-    loadMockAudio();
-  }, []);
+  // Função para renderizar informações do MIDI
+  const renderPianoVisualization = (midiData) => {
+    const container = pianoVisualizationRef.current;
+    if (container) {
+      // Criar um container estilizado para a informação MIDI
+      const pianoInfoDiv = document.createElement('div');
+      pianoInfoDiv.style.width = '100%';
+      pianoInfoDiv.style.height = '100%';
+      pianoInfoDiv.style.padding = '20px';
+      pianoInfoDiv.style.color = 'var(--text-primary)';
+      pianoInfoDiv.style.overflow = 'auto';
+      
+      // Adicionar informações do MIDI
+      pianoInfoDiv.innerHTML = `
+        <div>
+          <h4 style="margin-bottom: 15px; font-size: 1.2rem;">MIDI File Information:</h4>
+          <p style="margin-bottom: 8px;">Format: ${midiData.format}</p>
+          <p style="margin-bottom: 8px;">Number of tracks: ${midiData.track.length}</p>
+          <p style="margin-bottom: 15px;">Time division: ${midiData.timeDivision}</p>
+          
+          <div>
+            <h4 style="margin-bottom: 10px; font-size: 1.1rem;">Tracks:</h4>
+            <ul style="list-style-type: none; padding: 0;">
+              ${midiData.track.map((track, index) => `
+                <li style="margin-bottom: 5px; padding: 8px; background-color: rgba(0,0,0,0.2); border-radius: 4px;">
+                  Track ${index + 1}: ${track.event.length} events
+                </li>
+              `).join('')}
+            </ul>
+          </div>
+        </div>
+      `;
+      
+      // Limpar conteúdo anterior e adicionar a nova info
+      container.innerHTML = '';
+      container.appendChild(pianoInfoDiv);
+    }
+  };
 
+  // More comprehensive goBack function
   const goBack = () => {
+    // Reset all state
     setFileName('');
     setMidiLoaded(null);
+    setChordsData(null);
+    setAudioFile(null);
+    setLoading(false);
+    setIsTransitioning(false);
+    setIsDragging(false);
+    
+    // Reset file input
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
+    
+    // Small delay to ensure UI updates properly
+    setTimeout(() => {
+      // Force focus on the dropzone to make it more interactive
+      if (dropZoneRef.current) {
+        dropZoneRef.current.focus();
+      }
+    }, 100);
   };
 
   // Additional styles for drop zone
@@ -198,7 +330,7 @@ export default function PianoVisualizer() {
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    border: '2px dashed #ccc',
+    border: '2px dashed white',
     borderRadius: '8px',
     padding: '40px',
     textAlign: 'center',
@@ -241,6 +373,13 @@ export default function PianoVisualizer() {
     transition: 'all 0.2s ease'
   };
 
+  // Função auxiliar para formatar o tempo em minutos:segundos
+  const formatTime = (timeInSeconds) => {
+    const minutes = Math.floor(timeInSeconds / 60);
+    const seconds = Math.floor(timeInSeconds % 60);
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  };
+
   return (
     <>
       <Script 
@@ -261,13 +400,14 @@ export default function PianoVisualizer() {
               </h3>
             </div>
             
-            <PianoTilesContainer
-              midiData={midiLoaded} 
-              fileName={fileName}
-              audioData={audioFile}
-              autoOpenMidiConnector={true}
-            />
-          
+            <div className={styles.visualizationContainer}>
+              <PianoTilesContainer
+                midiData={midiLoaded} 
+                fileName={fileName}
+                audioData={audioFile}
+                autoOpenMidiConnector={true}
+              />
+            </div>
             
             <button 
               style={backButtonStyle}
@@ -275,9 +415,9 @@ export default function PianoVisualizer() {
             >
               Voltar
             </button>
-        </div>
+          </div>
       ) : (
-        // File upload interface
+        // File upload interface or loading screen
         <div 
           className="piano-container" 
           id="piano-container" 
@@ -285,20 +425,65 @@ export default function PianoVisualizer() {
             width: '100%', 
             height: '100%',
             display: 'flex',
-            flexDirection: 'column'
+            flexDirection: 'column',
+            position: 'relative' // Added to allow absolute positioning of hidden elements
           }}
         >
-          {fileName ? (
-            <div className={styles.loadedFile}>
-              <h3>Arquivo carregado: {fileName}</h3>
-              <div 
-                className={styles.pianoVisualization} 
-                style={{ flex: 1, width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center' }}
-              >
-                <p className={styles.loadingText}>Carregando visualização...</p>
+          {/* Dev button - now slightly more visible but still discrete */}
+          <div 
+            style={{
+              position: 'absolute',
+              bottom: '10px',
+              left: '10px',
+              width: '15px',
+              height: '15px',
+              border: '1px solid rgba(100, 100, 100, 0.15)',
+              borderRadius: '50%',
+              backgroundColor: 'rgba(150, 150, 150, 0.05)',
+              cursor: 'help',
+              zIndex: 1000,
+              transition: 'background-color 0.3s ease'
+            }}
+            title="Dev Mode"
+            onClick={(e) => {
+              // Now just needs a single click
+              e.stopPropagation();
+              loadDevMockFiles();
+            }}
+            onMouseOver={(e) => {
+              // Subtle highlight on hover
+              e.currentTarget.style.backgroundColor = 'rgba(150, 150, 150, 0.15)';
+            }}
+            onMouseOut={(e) => {
+              // Reset on mouse out
+              e.currentTarget.style.backgroundColor = 'rgba(150, 150, 150, 0.05)';
+            }}
+          />
+          
+          {loading ? (
+            // Loading spinner UI with improved circle animation and maintained container style
+            <div className={styles.loadingContainer}>
+              <div className={`${styles.fancySpinner} ${styles.enhancedLoader}`}>
+                <div className={styles.loaderCircle}></div>
+                <div className={styles.innerCircle}></div>
+                <div className={styles.outerCircle}></div>
               </div>
+              <p className={styles.loadingText}>Processando áudio e gerando MIDI...</p>
+              <p className={styles.smallText}>Isso pode levar alguns segundos</p>
+            </div>
+          ) : fileName && !midiLoaded ? (
+            // File selected but MIDI not yet loaded (transitional state)
+            <div className={styles.loadingContainer}>
+              <div className={`${styles.fancySpinner} ${styles.enhancedLoader}`}>
+                <div className={styles.loaderCircle}></div>
+                <div className={styles.innerCircle}></div>
+                <div className={styles.outerCircle}></div>
+              </div>
+              <p className={styles.loadingText}>Carregando visualização...</p>
+              <p className={styles.smallText}>Isso pode levar alguns segundos</p>
             </div>
           ) : (
+            // File upload UI only shown when not loading
             <div 
               style={dropZoneStyle}
               className={isDragging ? 'active' : ''} 
@@ -310,7 +495,9 @@ export default function PianoVisualizer() {
                   <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM12 20C7.59 20 4 16.41 4 12C4 7.59 7.59 4 12 4C16.41 4 20 7.59 20 12C20 16.41 16.41 20 12 20ZM16 11H13V8C13 7.45 12.55 7 12 7C11.45 7 11 7.45 11 8V11H8C7.45 11 7 11.45 7 12C7 12.55 7.45 13 8 13H11V16C11 16.55 11.45 17 12 17C12.55 17 13 16.55 13 16V13H16C16.55 13 17 12.55 17 12C17 11.45 16.55 11 16 11Z" fill="currentColor"/>
                 </svg>
               </div>
-              <h3 style={{ marginBottom: '10px', fontSize: '1.2rem' }}>Arraste e solte seu arquivo MIDI aqui</h3>
+              <h3 style={{ marginBottom: '10px', fontSize: '1.2rem' }}>
+                Arraste e solte seu arquivo de áudio aqui
+              </h3>
               <p style={{ marginBottom: '15px', color: 'var(--text-tertiary)' }}>ou</p>
               <label 
                 style={{ 
@@ -329,11 +516,17 @@ export default function PianoVisualizer() {
                 type="file" 
                 id="file-input" 
                 style={{ display: 'none' }}
-                accept=".mid,.midi" 
+                accept="audio/*" 
                 ref={fileInputRef} 
               />
+              <p style={{ marginTop: '20px', fontSize: '0.9rem', color: 'var(--text-tertiary)' }}>
+                Formatos suportados: MP3, WAV, OGG, etc.
+              </p>
             </div>
           )}
+          
+          {/* Hidden div for piano visualization data */}
+          <div ref={pianoVisualizationRef} style={{display: 'none'}}></div>
         </div>
       )}
     </>

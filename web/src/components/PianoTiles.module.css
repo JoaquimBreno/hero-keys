@@ -5,6 +5,8 @@
   min-height: 100vh;
   overflow: hidden;
   display: flex;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   flex-direction: column;
   gap: 15px; /* Reduced gap */
   padding: 15px; /* Reduced padding */
@@ -16,7 +18,9 @@
   left: 0;
   width: 100%;
   height: 100%;
-  background: linear-gradient(135deg, #1c1c1e 0%, #2c2c2e 100%);
+  background: linear-gradient(135deg, #1c1c1e 0%, #2c2c2e 60%);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   z-index: -1;
 }
 
@@ -28,8 +32,6 @@
   background: rgba(255, 255, 255, 0.9);
   border-radius: 16px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
   z-index: 2;
   /* Ensure player doesn't grow too much */
   flex: 0 0 auto;

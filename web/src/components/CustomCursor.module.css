@@ -18,8 +18,8 @@
   
   .glowEffect {
     position: fixed;
-    width: 300px;
-    height: 300px;
+    width: 2500px;
+    height: 2500px;
     background: radial-gradient(circle, rgba(0, 132, 255, 0.1) 0%, rgba(0, 0, 0, 0) 70%);
     border-radius: 50%;
     pointer-events: none;

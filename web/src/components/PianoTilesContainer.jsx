@@ -40,6 +40,12 @@ export default function PianoTilesContainer({ midiData, fileName, audioData, aut
     }
   }, [midiData, autoOpenMidiConnector]);
   
+  useEffect(() => {
+    if (midiData && midiData.tracks) {
+      console.log('MIDI data loaded:', midiData);
+    }
+  }, [midiData]);
+
   // Handle time updates from the audio player - use debounce to reduce updates
   const handleTimeUpdate = useCallback((timeMs) => {
     // Cancel previous update if it exists
@@ -62,7 +68,6 @@ export default function PianoTilesContainer({ midiData, fileName, audioData, aut
   
   // Handle note plays from the piano
   const handleNotePlay = useCallback((midiEvent) => {
-    console.log('Note played:', midiEvent);
     // Filter notes outside the valid range (36-95)
     if (midiEvent.data[0] >= 36 && midiEvent.data[0] <= 95) {
       setPlayedMidiNotes(prev => {
