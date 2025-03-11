@@ -4,12 +4,13 @@ import NotesVisualizer from './NotesVisualizer';
 import SheetMusicVisualizer from './SheetMusicVisualizer';
 import AudioPlayer from './AudioPlayer';
 import MidiDeviceConnector from './MidiDeviceConnector';
+import ChordCarousel from './ChordCarousel'; // Import the new component
 import styles from './PianoTiles.module.css';
 
 // Define consistent timing offsets for all components
 const NOTE_TIMING_OFFSET = 0; // milliseconds
 
-export default function PianoTilesContainer({ midiData, fileName, audioData, autoOpenMidiConnector = false }) {
+export default function PianoTilesContainer({ midiData, fileName, audioData, autoOpenMidiConnector = false, chordsData = null }) {
   const [currentPlaybackTime, setCurrentPlaybackTime] = useState(0);
   const [keyPositions, setKeyPositions] = useState({});
   const [showSheetMusic, setShowSheetMusic] = useState(false);
@@ -19,10 +20,10 @@ export default function PianoTilesContainer({ midiData, fileName, audioData, aut
   const [playedMidiNotes, setPlayedMidiNotes] = useState([]);
   const [initialMidiPromptDone, setInitialMidiPromptDone] = useState(false);
   const [isMidiSoundEnabled, setIsMidiSoundEnabled] = useState(true); // New state for MIDI sound
+  const [showChordCarousel, setShowChordCarousel] = useState(true); // New state for chord carousel visibility
   const containerRef = useRef(null);
   const timeUpdateRef = useRef(null);
   const midiDataLoadedRef = useRef(false);
-  
   
   // Detectar quando o midiData foi carregado pela primeira vez
   useEffect(() => {
@@ -139,11 +140,26 @@ export default function PianoTilesContainer({ midiData, fileName, audioData, aut
     }
   }, [initialMidiPromptDone]);
   
+  // Toggle chord carousel visibility
+  const handleChordCarouselToggle = useCallback(() => {
+    setShowChordCarousel(prev => !prev);
+  }, []);
+  
   return (
     <div className={styles.premiumContainer}>
       <div className={styles.blurredBackground}></div>
       
       <div className={styles.contentContainer}>
+        {/* Add Chord Carousel if chords data is available */}
+        {chordsData && showChordCarousel && (
+          <div className={styles.chordCarouselSection}>
+            <ChordCarousel 
+              chords={chordsData}
+              currentTime={currentPlaybackTime}
+            />
+          </div>
+        )}
+        
         {/* Visualization area - conditionally render based on toggle state */}
         <div className={styles.visualizerSection}>
           {showSheetMusic ? (
@@ -193,6 +209,8 @@ export default function PianoTilesContainer({ midiData, fileName, audioData, aut
             showSheetMusic={showSheetMusic}
             onMidiSoundToggle={handleMidiSoundToggle}
             isMidiSoundEnabled={isMidiSoundEnabled}
+            onChordCarouselToggle={chordsData ? handleChordCarouselToggle : null} // Add chord toggle if data exists
+            showChordCarousel={showChordCarousel}
           />
         </div>
       </div>

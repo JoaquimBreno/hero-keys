@@ -1,9 +1,9 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
-import Script from 'next/script';
+// Removed Script import since we don't need it
 import styles from './PianoVisualizer.module.css';
 import * as Tone from 'tone';
-import { Midi } from '@tonejs/midi';  // Add import for MIDI parsing
+import { Midi } from '@tonejs/midi';  // We're using this directly for MIDI parsing
 import PianoTilesContainer from './PianoTilesContainer';
 
 export default function PianoVisualizer() {
@@ -11,7 +11,7 @@ export default function PianoVisualizer() {
   const fileInputRef = useRef(null);
   const pianoVisualizationRef = useRef(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [isLoaded, setIsLoaded] = useState(false);
+  const [isLoaded, setIsLoaded] = useState(true); // Initialize to true since we don't need to wait for script
   const [fileName, setFileName] = useState('');
   const [midiLoaded, setMidiLoaded] = useState(null);  
   const [chordsData, setChordsData] = useState(null);
@@ -46,6 +46,21 @@ export default function PianoVisualizer() {
         setMidiLoaded(midi);
         setAudioFile(audioObjectUrl);
         
+        // If we have mock chord data, format it properly too
+        try {
+          fetch('/devinteste-chords.json')
+            .then(res => res.json())
+            .then(chords => {
+              if (Array.isArray(chords)) {
+                setChordsData({
+                  data: chords,
+                  type: 'chord-data'
+                });
+              }
+            })
+            .catch(err => console.log('No chord data available for dev mock'));
+        } catch (err) {}
+        
         // End transition after a delay
         setTimeout(() => {
           setIsTransitioning(false);
@@ -57,12 +72,6 @@ export default function PianoVisualizer() {
     } finally {
       setLoading(false);
     }
-  };
-
-  // Handle Tone.js script load
-  const handleScriptLoad = () => {
-    console.log('Tone.js script loaded');
-    setIsLoaded(true);
   };
 
   const base64ToBlob = (base64Data) => {
@@ -104,9 +113,17 @@ export default function PianoVisualizer() {
           throw new Error('MIDI data not received from server');
         }
         
-        // Store chord data
-        if (chords) {
-          setChordsData(chords);
+        console.log("Chords", chords);
+        // Store chord data - ensure it's in the correct format
+        if (chords && Array.isArray(chords)) {
+          // Format the chord data properly to avoid Component is not a function error
+          setChordsData({
+            data: chords,
+            type: 'chord-data'
+          });
+        } else {
+          setChordsData(null);
+          console.warn('Received chord data was not in expected array format');
         }
         
         // Convert base64 MIDI to ArrayBuffer and parse with Tone.js
@@ -177,6 +194,9 @@ export default function PianoVisualizer() {
     const dropZone = dropZoneRef.current;
     const fileInput = fileInputRef.current;
     
+    // Guard clause - return early if elements don't exist
+    if (!dropZone || !fileInput) return;
+    
     // Prevent default drag behaviors
     const preventDefaults = (e) => {
       e.preventDefault();
@@ -219,12 +239,13 @@ export default function PianoVisualizer() {
     
     // Handle file input change
     const handleFileInputChange = () => {
+      console.log('File input change detected');
       handleFiles(fileInput.files);
       // Reset the input so the same file can be selected again
       fileInput.value = '';
     };
     
-    // Add event listeners
+    // Add event listeners - with safety checks
     ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
       dropZone.addEventListener(eventName, preventDefaults, false);
       document.body.addEventListener(eventName, preventDefaults, false);
@@ -243,21 +264,23 @@ export default function PianoVisualizer() {
     
     // Cleanup
     return () => {
-      ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-        dropZone.removeEventListener(eventName, preventDefaults, false);
-        document.body.removeEventListener(eventName, preventDefaults, false);
-      });
-      
-      ['dragenter', 'dragover'].forEach(eventName => {
-        dropZone.removeEventListener(eventName, highlight, false);
-      });
-      
-      ['dragleave', 'drop'].forEach(eventName => {
-        dropZone.removeEventListener(eventName, unhighlight, false);
-      });
-      
-      dropZone.removeEventListener('drop', handleDrop, false);
-      fileInput.removeEventListener('change', handleFileInputChange, false);
+      if (dropZone && fileInput) {
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+          dropZone.removeEventListener(eventName, preventDefaults, false);
+          document.body.removeEventListener(eventName, preventDefaults, false);
+        });
+        
+        ['dragenter', 'dragover'].forEach(eventName => {
+          dropZone.removeEventListener(eventName, highlight, false);
+        });
+        
+        ['dragleave', 'drop'].forEach(eventName => {
+          dropZone.removeEventListener(eventName, unhighlight, false);
+        });
+        
+        dropZone.removeEventListener('drop', handleDrop, false);
+        fileInput.removeEventListener('change', handleFileInputChange, false);
+      }
     };
   }, [isLoaded, midiLoaded]); // Add midiLoaded as a dependency to re-attach listeners
 
@@ -391,12 +414,6 @@ export default function PianoVisualizer() {
 
   return (
     <>
-      <Script 
-        src="https://cdn.jsdelivr.net/npm/midi-parser-js/midi-parser.min.js" 
-        strategy="afterInteractive"
-        onLoad={handleScriptLoad}
-      />
-      
       {midiLoaded ? (
         // Full-screen visualization when MIDI is loaded
           <div 
@@ -415,6 +432,8 @@ export default function PianoVisualizer() {
                 fileName={fileName}
                 audioData={audioFile}
                 autoOpenMidiConnector={true}
+                chordsData={chordsData} 
+                renderChords={!!chordsData} // Add a boolean flag to control chord rendering
               />
             </div>
             

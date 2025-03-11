@@ -25,7 +25,6 @@ const NotesVisualizer = memo(function NotesVisualizer({
   // Update refs when props change without triggering renders
   useEffect(() => {
     currentTimeRef.current = currentTime;
-    console.log("Current time updated (ms):", currentTime);
   }, [currentTime]);
   
   useEffect(() => {
