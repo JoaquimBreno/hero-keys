@@ -1,6 +1,9 @@
 import React, { useEffect, useRef, memo } from 'react';
 import styles from './NotesVisualizer.module.css';
 
+// Piano split point constant
+const SPLIT_POINT = 60; // C4
+
 // Use memo to prevent unnecessary re-renders
 const NotesVisualizer = memo(function NotesVisualizer({ 
   midiData, 
@@ -347,6 +350,7 @@ const NotesVisualizer = memo(function NotesVisualizer({
       const isBlack = keyInfo.isBlack;
       const x = keyInfo.x;
       const width = keyInfo.width * 0.85; // Slightly narrower than the actual key
+      const isLeftHand = note.note < SPLIT_POINT;
       
       // Calculate position using adjusted time
       const timeToPlay = note.startTime - adjustedTime;
@@ -375,15 +379,15 @@ const NotesVisualizer = memo(function NotesVisualizer({
         
         // Only draw if at least part of the note is visible
         if (!(bottom < 0 || top > height)) {
-          // Set colors based on note type and state
+          // Set colors based on note type, state and hand position
           if (isActive || isPlayedViaMidi) {
             // Glowing active note
-            ctx.fillStyle = isBlack ? '#00d9e8' : '#00d9e8';
-            ctx.shadowColor = '#00d9e8';
+            ctx.fillStyle = isLeftHand ? '#00e873' : '#00d9e8';
+            ctx.shadowColor = isLeftHand ? '#00e873' : '#00d9e8';
             ctx.shadowBlur = 10;
           } else {
-            // Regular note
-            ctx.fillStyle = isBlack ? '#333' : '#fff';
+            // Regular note with hand position color
+            ctx.fillStyle = isBlack ? (isLeftHand ? '#2a563a' : '#2a4956') : (isLeftHand ? '#e0f5ea' : '#e0f0f5');
             ctx.shadowBlur = 0;
           }
           
@@ -428,6 +432,7 @@ const NotesVisualizer = memo(function NotesVisualizer({
       const isBlack = keyInfo.isBlack;
       const x = keyInfo.x;
       const noteWidth = keyInfo.width * 0.85;
+      const isLeftHand = noteNumber < SPLIT_POINT;
       
       // Draw at the bottom of the canvas (real-time played)
       ctx.beginPath();
@@ -437,9 +442,9 @@ const NotesVisualizer = memo(function NotesVisualizer({
       const bottom = height;
       const top = height - 30; // Fixed height for played notes
       
-      // Glowing effect for played notes
-      ctx.fillStyle = '#00d9e8';
-      ctx.shadowColor = '#00d9e8';
+      // Glowing effect for played notes with color based on hand position
+      ctx.fillStyle = isLeftHand ? '#00e873' : '#00d9e8';
+      ctx.shadowColor = isLeftHand ? '#00e873' : '#00d9e8';
       ctx.shadowBlur = 15;
       
       // Draw rounded rectangle
@@ -470,6 +475,9 @@ const NotesVisualizer = memo(function NotesVisualizer({
     const x = keyPositions[noteNumber].x;
     const numParticles = 20;
     
+    // Set color based on split point
+    const color = noteNumber < SPLIT_POINT ? '#00e873' : '#00d9e8';
+    
     for (let i = 0; i < numParticles; i++) {
       particlesRef.current.push({
         x: x + (Math.random() * 20 - 10),
@@ -478,7 +486,7 @@ const NotesVisualizer = memo(function NotesVisualizer({
         vy: -Math.random() * 5 - 2,
         radius: Math.random() * 3 + 1,
         alpha: 1,
-        color: '#00d9e8'
+        color: color
       });
     }
   }
@@ -510,8 +518,11 @@ const NotesVisualizer = memo(function NotesVisualizer({
           particle.x, particle.y, 0,
           particle.x, particle.y, particle.radius
         );
-        gradient.addColorStop(0, `rgba(0, 217, 232, ${particle.alpha})`);
-        gradient.addColorStop(1, `rgba(0, 217, 232, 0)`);
+        
+        // Use the particle's color
+        const color = particle.color || '#00d9e8'; // Default to blue if color not set
+        gradient.addColorStop(0, `rgba(${hexToRgb(color)}, ${particle.alpha})`);
+        gradient.addColorStop(1, `rgba(${hexToRgb(color)}, 0)`);
         
         ctx.fillStyle = gradient;
         ctx.fill();
@@ -520,6 +531,19 @@ const NotesVisualizer = memo(function NotesVisualizer({
       });
     
     ctx.globalCompositeOperation = 'source-over';
+  }
+  
+  // Helper function to convert hex to RGB
+  function hexToRgb(hex) {
+    // Remove # if present
+    hex = hex.replace(/^#/, '');
+    
+    // Parse the hex values
+    const r = parseInt(hex.substring(0, 2), 16);
+    const g = parseInt(hex.substring(2, 4), 16);
+    const b = parseInt(hex.substring(4, 6), 16);
+    
+    return `${r}, ${g}, ${b}`;
   }
   
   return (
