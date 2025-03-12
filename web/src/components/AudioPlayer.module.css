@@ -132,3 +132,23 @@
 .tablatureActive:hover {
   background: #d35400;
 }
+
+/* Add this to your existing CSS */
+.rateButton {
+  font-weight: bold;
+  min-width: 50px;
+  background-color: #282828;
+  border: 1px solid #444;
+  border-radius: 4px;
+  color: #00d9e8;
+  transition: all 0.2s ease;
+}
+
+.rateButton:hover {
+  background-color: #333;
+  color: #fff;
+}
+
+.rateButton:active {
+  transform: scale(0.95);
+}

@@ -18,6 +18,10 @@ const AudioPlayer = forwardRef(({
   const [duration, setDuration] = useState(0);
   const [isMuted, setIsMuted] = useState(false);
   const [progressPercent, setProgressPercent] = useState(0);
+  // Add playback rate state
+  const [playbackRate, setPlaybackRate] = useState(1);
+  const playbackRates = [0.25, 0.5, 1, 1.25, 1.5];
+  
   const audioRef = useRef(null);
   const currentTimeRef = useRef(0);
   const seekingRef = useRef(false);
@@ -71,6 +75,8 @@ const AudioPlayer = forwardRef(({
     if (audioRef.current) {
       audioRef.current.src = audioUrl;
       audioRef.current.load();
+      // Set initial playback rate
+      audioRef.current.playbackRate = playbackRate;
     }
     
     // Only revoke URL if we created it
@@ -80,6 +86,13 @@ const AudioPlayer = forwardRef(({
       }
     };
   }, [audioData]);
+
+  // Update audio playback rate when it changes
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.playbackRate = playbackRate;
+    }
+  }, [playbackRate]);
   
   // Handle metadata loaded
   const handleMetadataLoaded = () => {
@@ -157,6 +170,13 @@ const AudioPlayer = forwardRef(({
     const secs = Math.floor(seconds % 60);
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
+
+  // Handle playback rate change
+  const handlePlaybackRateChange = () => {
+    const currentIndex = playbackRates.indexOf(playbackRate);
+    const nextIndex = (currentIndex + 1) % playbackRates.length;
+    setPlaybackRate(playbackRates[nextIndex]);
+  };
   
   return (
     <div className={styles.audioPlayer}>
@@ -187,6 +207,16 @@ const AudioPlayer = forwardRef(({
           title={isMuted ? 'Unmute' : 'Mute'}
         >
           M
+        </button>
+
+        {/* Add playback rate button */}
+        <button
+          className={`${styles.controlButton} ${styles.rateButton}`}
+          onClick={handlePlaybackRateChange}
+          aria-label={`Change playback speed, current: ${playbackRate}x`}
+          title="Change playback speed"
+        >
+          {playbackRate}x
         </button>
         
         {/* New MIDI sound toggle button */}
