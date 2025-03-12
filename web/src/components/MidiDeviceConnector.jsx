@@ -8,7 +8,7 @@ export default function MidiDeviceConnector({
   onClose, 
   onMidiConnect, 
   onMidiMessage,
-  isMidiSoundEnabled // New prop for controlling MIDI sound output
+  isMidiSoundEnabled // Now this represents if MIDI sound volume is > 0
 }) {
   const [midiAccess, setMidiAccess] = useState(null);
   const [midiEnable, setMidiEnable] = useState(false);

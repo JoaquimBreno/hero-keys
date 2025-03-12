@@ -4,10 +4,10 @@ import styles from './SheetMusicVisualizer.module.css';
 // Constants for musical notation
 const TREBLE_CLEF = '𝄞';
 const BASS_CLEF = '𝄢';
-const WHOLE_NOTE = '𝅝';
-const HALF_NOTE = '𝅗𝅥';
-const QUARTER_NOTE = '𝅘𝅥';
-const EIGHTH_NOTE = '𝅘𝅥𝅮';
+const WHOLE_NOTE = '.';
+const HALF_NOTE = '.';
+const QUARTER_NOTE = '.';
+const EIGHTH_NOTE = '.';
 const SHARP = '♯';
 const FLAT = '♭';
 const NATURAL = '♮';
