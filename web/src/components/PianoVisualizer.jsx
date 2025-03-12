@@ -22,8 +22,8 @@ export default function PianoVisualizer() {
   // Secret dev mode function to load mock files from public directory
   const loadDevMockFiles = async () => {
     setLoading(true);
-    setFileName('dragon.mp3');
-    const audioUrl = '/dragon.mp3';
+    setFileName('take.mp3');
+    const audioUrl = '/take.mp3';
     
     try {
       // Fetch the audio file from public directory
@@ -33,7 +33,7 @@ export default function PianoVisualizer() {
       const audioObjectUrl = URL.createObjectURL(audioBlob);
       
       // Fetch the MIDI file from public directory
-      const midiResponse = await fetch('/dragon.mid');
+      const midiResponse = await fetch('/take.mid');
       const midiArrayBuffer = await midiResponse.arrayBuffer();
       
       // Load the MIDI data using the correct Midi parser
@@ -48,7 +48,7 @@ export default function PianoVisualizer() {
         
         // If we have mock chord data, format it properly too
         try {
-          fetch('/dragon.json')
+          fetch('/take.json')
             .then(res => res.json())
             .then(chords => {
               if (Array.isArray(chords)) {
