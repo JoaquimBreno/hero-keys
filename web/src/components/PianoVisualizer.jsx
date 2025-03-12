@@ -450,7 +450,7 @@ export default function PianoVisualizer() {
           className="piano-container" 
           id="piano-container" 
           style={{ 
-            width: '100%', 
+            width: '50%', 
             height: '100%',
             display: 'flex',
             flexDirection: 'column',
