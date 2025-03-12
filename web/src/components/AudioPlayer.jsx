@@ -27,6 +27,8 @@ const AudioPlayer = forwardRef(({
   const seekingRef = useRef(false);
   const animationFrameRef = useRef(null);
   const seekBarContainerRef = useRef(null);
+  // Add a ref to track the last time we updated the UI
+  const lastUIUpdateRef = useRef(0);
   
   // Expose seekToTime function to parent components
   useImperativeHandle(ref, () => ({
@@ -109,9 +111,13 @@ const AudioPlayer = forwardRef(({
         const previousTime = currentTimeRef.current;
         currentTimeRef.current = time;
         
-        // Only update display time (less frequent) to avoid re-renders
-        setDisplayTime(time); 
-        setProgressPercent((time / audioRef.current.duration) * 100);
+        // Throttle UI updates to 4 times per second (250ms)
+        const now = Date.now();
+        if (now - lastUIUpdateRef.current > 250) {
+          setDisplayTime(time);
+          setProgressPercent((time / (audioRef.current.duration || 1)) * 100);
+          lastUIUpdateRef.current = now;
+        }
         
         // Always report current time to parent for synchronization
         // even for small changes to ensure precise note visualization
@@ -122,14 +128,17 @@ const AudioPlayer = forwardRef(({
       animationFrameRef.current = requestAnimationFrame(updateTime);
     };
     
-    animationFrameRef.current = requestAnimationFrame(updateTime);
+    if (isPlaying) {
+      animationFrameRef.current = requestAnimationFrame(updateTime);
+    }
     
     return () => {
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
+        animationFrameRef.current = null;
       }
     };
-  }, [isPlaying, onTimeUpdate]);
+  }, [isPlaying, onTimeUpdate, duration]); // Added duration as a dependency
   
   // Handle play/pause
   const togglePlay = () => {
