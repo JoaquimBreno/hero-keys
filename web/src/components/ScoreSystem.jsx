@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import styles from './ScoreSystem.module.css';
 import FireEffect from './FireEffect';
-import { preloadSound, playSound } from '../utils/soundController';
 
 // Configuration constants
 const STREAK_THRESHOLD = 8; // Number of consecutive correct notes to trigger fire effect
@@ -10,11 +9,6 @@ const VIBRATION_THRESHOLD = 5; // When to start vibrating the piano
 const POINTS_BASE = 100; // Base points for a correct chord/set of simultaneous notes
 const POINTS_MULTIPLIER_INCREMENT = 0.1; // How much multiplier increases per correct chord
 const MAX_MULTIPLIER = 5.0; // Maximum score multiplier
-
-// Sound effects
-const WRONG_NOTE_SOUND_URL = '/sounds/wrong-note.mp3';
-const STREAK_SOUND_URL = '/sounds/streak.mp3';
-const PERFECT_SOUND_URL = '/sounds/perfect.mp3';
 
 export default function ScoreSystem({ 
   midiData, 
@@ -40,28 +34,6 @@ export default function ScoreSystem({
   const expectedNotesRef = useRef(new Set());
   const activeNotesRef = useRef(new Set());
   const lastPlayedNotesRef = useRef(new Set());
-  const soundsLoadedRef = useRef(false);
-  
-  // Initialize sound effects
-  useEffect(() => {
-    async function loadSounds() {
-      try {
-        // Preload individual sounds
-        await preloadSound('wrongNote', WRONG_NOTE_SOUND_URL, 0.3);
-        await preloadSound('streak', STREAK_SOUND_URL, 0.5);
-        await preloadSound('perfect', PERFECT_SOUND_URL, 0.7);
-        soundsLoadedRef.current = true;
-      } catch (error) {
-        console.error("Error loading sound effects:", error);
-      }
-    }
-    
-    loadSounds();
-    
-    return () => {
-      // No need to clean up - the sound controller handles this
-    };
-  }, []);
   
   // Keep refs updated with state
   useEffect(() => {
@@ -153,11 +125,6 @@ export default function ScoreSystem({
       
       // Handle wrong notes or incomplete chords
       if (wrongNotes) {
-        // Play wrong note sound
-        if (soundsLoadedRef.current) {
-          playSound('wrongNote');
-        }
-        
         // Reset streak and lower multiplier
         setStreak(0);
         setMultiplier(1.0);
@@ -197,11 +164,6 @@ export default function ScoreSystem({
   const checkStreakThresholds = (newStreak) => {
     // Fire effect threshold
     if (newStreak >= STREAK_THRESHOLD && newStreak % 8 === 0) {
-      // Play streak sound
-      if (soundsLoadedRef.current) {
-        playSound('streak');
-      }
-      
       // Show fire effect
       setShowFireEffect(true);
       setTimeout(() => setShowFireEffect(false), 4000); // Fire effect duration
@@ -214,10 +176,7 @@ export default function ScoreSystem({
     
     // Perfect threshold
     if (newStreak >= PERFECT_THRESHOLD && newStreak % PERFECT_THRESHOLD === 0) {
-      // Play perfect sound
-      if (soundsLoadedRef.current) {
-        playSound('perfect');
-      }
+      // Removed sound effect call
     }
     
     // Vibration effect threshold
