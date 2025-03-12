@@ -5,6 +5,7 @@ import styles from './StylishPiano.module.css';
 // Piano configuration constants moved outside the component
 const START_NOTE = 36; // C2
 const KEY_COUNT = 60; // 5 octaves (12 notes per octave * 5)
+const SPLIT_POINT = 60; // C4
 
 export default function StylishPiano({ 
   midiData, 
@@ -240,11 +241,12 @@ export default function StylishPiano({
     const noteName = getSimpleNoteName(midiNote);
     const isBlack = isBlackKey(midiNote);
     const isActive = pressedKeys.includes(midiNote);
+    const isLeftHand = midiNote < SPLIT_POINT;
     
     if (isBlack) {
-      blackNotes.push({ midiNote, noteName, isActive });
+      blackNotes.push({ midiNote, noteName, isActive, isLeftHand });
     } else {
-      whiteNotes.push({ midiNote, noteName, isActive });
+      whiteNotes.push({ midiNote, noteName, isActive, isLeftHand });
     }
   }
 
@@ -253,7 +255,7 @@ export default function StylishPiano({
       {/* Nota ativa indicador */}
       {activeNoteInfo && (
         <div className={styles.activeNoteIndicator}>
-          <div className={styles.noteNameBadge}>
+          <div className={`${styles.noteNameBadge} ${activeNoteInfo.note < SPLIT_POINT ? styles.leftHandBadge : styles.rightHandBadge}`}>
             {activeNoteInfo.name}
           </div>
         </div>
@@ -266,7 +268,7 @@ export default function StylishPiano({
             <div 
               key={note.midiNote}
               ref={el => whiteKeysRef.current[note.midiNote] = el}
-              className={`${styles.whiteKey} ${note.isActive ? styles.activeNote : ''}`}
+              className={`${styles.whiteKey} ${note.isActive ? (note.isLeftHand ? styles.activeNoteLeft : styles.activeNoteRight) : ''}`}
               data-note={note.midiNote}
               onMouseDown={() => handleMouseDown(note.midiNote)}
               onMouseUp={() => handleMouseUp(note.midiNote)}
@@ -285,7 +287,7 @@ export default function StylishPiano({
               <div
                 key={note.midiNote}
                 ref={el => blackKeysRef.current[note.midiNote] = el}
-                className={`${styles.blackKey} ${note.isActive ? styles.activeNote : ''}`}
+                className={`${styles.blackKey} ${note.isActive ? (note.isLeftHand ? styles.activeNoteLeft : styles.activeNoteRight) : ''}`}
                 style={{ left: `${position}%` }}
                 data-note={note.midiNote}
                 onMouseDown={() => handleMouseDown(note.midiNote)}
