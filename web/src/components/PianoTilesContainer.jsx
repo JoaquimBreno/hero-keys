@@ -5,6 +5,8 @@ import SheetMusicVisualizer from './SheetMusicVisualizer';
 import AudioPlayer from './AudioPlayer';
 import MidiDeviceConnector from './MidiDeviceConnector';
 import ChordCarousel from './ChordCarousel'; // Import the new component
+import ScoreSystem from './ScoreSystem'; // Add ScoreSystem import
+import FireEffect from './FireEffect'; // Add FireEffect import
 import styles from './PianoTiles.module.css';
 
 // Define consistent timing offsets for all components
@@ -21,9 +23,53 @@ export default function PianoTilesContainer({ midiData, fileName, audioData, aut
   const [initialMidiPromptDone, setInitialMidiPromptDone] = useState(false);
   const [isMidiSoundEnabled, setIsMidiSoundEnabled] = useState(true); // New state for MIDI sound
   const [showChordCarousel, setShowChordCarousel] = useState(true); // New state for chord carousel visibility
+  
+  // New state for scoring system and effects
+  const [showFireEffect, setShowFireEffect] = useState(false);
+  const [vibrateIntensity, setVibrateIntensity] = useState(0);
+  
   const containerRef = useRef(null);
   const timeUpdateRef = useRef(null);
   const midiDataLoadedRef = useRef(false);
+  
+  // Apply vibration effect to relevant components
+  const applyVibrationStyle = (element, intensity) => {
+    if (!element) return;
+    
+    if (intensity > 0) {
+      const vibrationAmount = Math.min(intensity * 3, 3); // Max 3px vibration
+      element.style.transform = `translate(${Math.random() * vibrationAmount - vibrationAmount/2}px, ${Math.random() * vibrationAmount - vibrationAmount/2}px)`;
+    } else {
+      element.style.transform = 'none';
+    }
+  };
+  
+  // Handle vibration effect updates
+  useEffect(() => {
+    if (!vibrateIntensity) return;
+    
+    const visualizerEl = document.querySelector(`.${styles.visualizerSection}`);
+    const pianoEl = document.querySelector(`.${styles.pianoSection}`);
+    
+    const applyVibration = () => {
+      applyVibrationStyle(visualizerEl, vibrateIntensity);
+      applyVibrationStyle(pianoEl, vibrateIntensity);
+    };
+    
+    // Create vibration animation
+    let vibrationInterval;
+    if (vibrateIntensity > 0) {
+      vibrationInterval = setInterval(applyVibration, 50);
+      applyVibration();
+    }
+    
+    return () => {
+      clearInterval(vibrationInterval);
+      // Reset vibration when component unmounts or intensity changes
+      if (visualizerEl) visualizerEl.style.transform = 'none';
+      if (pianoEl) pianoEl.style.transform = 'none';
+    };
+  }, [vibrateIntensity]);
   
   // Detectar quando o midiData foi carregado pela primeira vez
   useEffect(() => {
@@ -145,11 +191,33 @@ export default function PianoTilesContainer({ midiData, fileName, audioData, aut
     setShowChordCarousel(prev => !prev);
   }, []);
   
+  // Handle fire effect toggle
+  const handleFireEffect = useCallback((active) => {
+    setShowFireEffect(active);
+  }, []);
+  
+  // Handle vibration intensity change
+  const handleVibrateChange = useCallback((intensity) => {
+    setVibrateIntensity(intensity);
+  }, []);
+  
   return (
-    <div className={styles.premiumContainer}>
+    <div className={styles.premiumContainer} ref={containerRef}>
       <div className={styles.blurredBackground}></div>
       
+      {/* Fire Effect - Positioned at the top level to cover the entire UI */}
+      <FireEffect active={showFireEffect} />
+      
       <div className={styles.contentContainer}>
+        {/* Add Score System */}
+        <ScoreSystem 
+          midiData={midiData} 
+          currentTime={currentPlaybackTime}
+          playedMidiNotes={playedMidiNotes}
+          onVibrateChange={handleVibrateChange}
+          onFireEffect={handleFireEffect}
+        />
+        
         {/* Add Chord Carousel if chords data is available */}
         {chordsData && showChordCarousel && (
           <div className={styles.chordCarouselSection}>
