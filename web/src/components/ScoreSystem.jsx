@@ -1,0 +1,275 @@
+import React, { useState, useEffect, useRef } from 'react';
+import styles from './ScoreSystem.module.css';
+import FireEffect from './FireEffect';
+import { preloadSound, playSound } from '../utils/soundController';
+
+// Configuration constants
+const STREAK_THRESHOLD = 8; // Number of consecutive correct notes to trigger fire effect
+const PERFECT_THRESHOLD = 15; // Number of consecutive correct notes for "Perfect" rating
+const VIBRATION_THRESHOLD = 5; // When to start vibrating the piano
+const POINTS_BASE = 100; // Base points for a correct note
+const POINTS_MULTIPLIER_INCREMENT = 0.1; // How much multiplier increases per correct note
+const MAX_MULTIPLIER = 5.0; // Maximum score multiplier
+
+// Sound effects
+const WRONG_NOTE_SOUND_URL = '/sounds/wrong-note.mp3';
+const STREAK_SOUND_URL = '/sounds/streak.mp3';
+const PERFECT_SOUND_URL = '/sounds/perfect.mp3';
+
+export default function ScoreSystem({ 
+  midiData, 
+  currentTime, 
+  playedMidiNotes, 
+  onVibrateChange, 
+  onFireEffect 
+}) {
+  // State for scoring and streaks
+  const [score, setScore] = useState(0);
+  const [streak, setStreak] = useState(0);
+  const [maxStreak, setMaxStreak] = useState(0);
+  const [multiplier, setMultiplier] = useState(1.0);
+  const [rating, setRating] = useState('');
+  const [showFireEffect, setShowFireEffect] = useState(false);
+  const [vibrationLevel, setVibrationLevel] = useState(0);
+  
+  // Refs to track state without rerenders
+  const scoreRef = useRef(score);
+  const streakRef = useRef(streak);
+  const multiplierRef = useRef(multiplier);
+  const expectedNotesRef = useRef(new Set());
+  const activeNotesRef = useRef(new Set());
+  const lastPlayedNotesRef = useRef(new Set());
+  const soundsLoadedRef = useRef(false);
+  
+  // Initialize sound effects
+  useEffect(() => {
+    async function loadSounds() {
+      try {
+        // Preload individual sounds
+        await preloadSound('wrongNote', WRONG_NOTE_SOUND_URL, 0.3);
+        await preloadSound('streak', STREAK_SOUND_URL, 0.5);
+        await preloadSound('perfect', PERFECT_SOUND_URL, 0.7);
+        soundsLoadedRef.current = true;
+      } catch (error) {
+        console.error("Error loading sound effects:", error);
+      }
+    }
+    
+    loadSounds();
+    
+    return () => {
+      // No need to clean up - the sound controller handles this
+    };
+  }, []);
+  
+  // Keep refs updated with state
+  useEffect(() => {
+    scoreRef.current = score;
+    streakRef.current = streak;
+    multiplierRef.current = multiplier;
+  }, [score, streak, multiplier]);
+  
+  // Update expected notes based on MIDI data and current time
+  useEffect(() => {
+    if (!midiData || !midiData.tracks) return;
+    
+    const newExpectedNotes = new Set();
+    const now = currentTime;
+    const timeWindow = 150; // Time window in ms to consider a note "expected"
+    
+    // Find notes that should be played at this time
+    midiData.tracks.forEach(track => {
+      if (track.notes && track.notes.length > 0) {
+        track.notes.forEach(note => {
+          const noteStartTime = note.time * 1000; // Convert to ms
+          const noteEndTime = (note.time + note.duration) * 1000;
+          
+          // Check if this note should be played now (with a small window)
+          if (noteStartTime <= now && noteEndTime >= now - timeWindow) {
+            newExpectedNotes.add(note.midi);
+          }
+        });
+      }
+    });
+    
+    expectedNotesRef.current = newExpectedNotes;
+    activeNotesRef.current = new Set(playedMidiNotes);
+    
+  }, [midiData, currentTime, playedMidiNotes]);
+  
+  // Process note hits and misses
+  useEffect(() => {
+    const expectedNotes = expectedNotesRef.current;
+    const activeNotes = new Set(playedMidiNotes);
+    const lastPlayedNotes = lastPlayedNotesRef.current;
+    
+    // Find newly pressed notes (not in last update)
+    const newNotes = new Set(
+      [...activeNotes].filter(note => !lastPlayedNotes.has(note))
+    );
+    
+    // Process new notes to see if they were correct or wrong
+    if (newNotes.size > 0) {
+      let correctHits = 0;
+      let wrongHits = 0;
+      
+      newNotes.forEach(note => {
+        if (expectedNotes.has(note)) {
+          correctHits++;
+        } else {
+          wrongHits++;
+        }
+      });
+      
+      // Handle correct notes
+      if (correctHits > 0) {
+        // Calculate points with current multiplier
+        const pointsGained = Math.round(POINTS_BASE * correctHits * multiplierRef.current);
+        
+        // Update streak
+        const newStreak = streakRef.current + correctHits;
+        setStreak(newStreak);
+        
+        // Update max streak if needed
+        if (newStreak > maxStreak) {
+          setMaxStreak(newStreak);
+        }
+        
+        // Increase multiplier
+        const newMultiplier = Math.min(
+          multiplierRef.current + (POINTS_MULTIPLIER_INCREMENT * correctHits),
+          MAX_MULTIPLIER
+        );
+        setMultiplier(newMultiplier);
+        
+        // Update score
+        setScore(scoreRef.current + pointsGained);
+        
+        // Update rating
+        updateRating(newStreak);
+        
+        // Check for streak thresholds
+        checkStreakThresholds(newStreak);
+      }
+      
+      // Handle wrong notes
+      if (wrongHits > 0) {
+        // Play wrong note sound
+        if (soundsLoadedRef.current) {
+          playSound('wrongNote');
+        }
+        
+        // Reset streak and lower multiplier
+        setStreak(0);
+        setMultiplier(1.0);
+        setRating('');
+        
+        // Turn off effects
+        setShowFireEffect(false);
+        setVibrationLevel(0);
+        if (onVibrateChange) onVibrateChange(0);
+        if (onFireEffect) onFireEffect(false);
+      }
+    }
+    
+    // Update last played notes for next comparison
+    lastPlayedNotesRef.current = activeNotes;
+    
+  }, [playedMidiNotes, maxStreak, onVibrateChange, onFireEffect]);
+  
+  // Update UI for effects based on streak
+  useEffect(() => {
+    if (onFireEffect) {
+      onFireEffect(showFireEffect);
+    }
+    
+    if (onVibrateChange) {
+      onVibrateChange(vibrationLevel);
+    }
+  }, [showFireEffect, vibrationLevel, onFireEffect, onVibrateChange]);
+  
+  // Check streak thresholds and trigger effects
+  const checkStreakThresholds = (newStreak) => {
+    // Fire effect threshold
+    if (newStreak >= STREAK_THRESHOLD && newStreak % 8 === 0) {
+      // Play streak sound
+      if (soundsLoadedRef.current) {
+        playSound('streak');
+      }
+      
+      // Show fire effect
+      setShowFireEffect(true);
+      setTimeout(() => setShowFireEffect(false), 4000); // Fire effect duration
+      
+      if (onFireEffect) {
+        onFireEffect(true);
+        setTimeout(() => onFireEffect(false), 4000);
+      }
+    }
+    
+    // Perfect threshold
+    if (newStreak >= PERFECT_THRESHOLD && newStreak % PERFECT_THRESHOLD === 0) {
+      // Play perfect sound
+      if (soundsLoadedRef.current) {
+        playSound('perfect');
+      }
+    }
+    
+    // Vibration effect threshold
+    if (newStreak >= VIBRATION_THRESHOLD) {
+      const intensity = Math.min(Math.floor(newStreak / VIBRATION_THRESHOLD) * 0.2, 1);
+      setVibrationLevel(intensity);
+    } else {
+      setVibrationLevel(0);
+    }
+  };
+  
+  // Update player rating based on streak
+  const updateRating = (currentStreak) => {
+    if (currentStreak >= PERFECT_THRESHOLD) {
+      setRating('Perfect!');
+    } else if (currentStreak >= 10) {
+      setRating('Excellent!');
+    } else if (currentStreak >= 5) {
+      setRating('Great!');
+    } else if (currentStreak >= 3) {
+      setRating('Good!');
+    } else {
+      setRating('');
+    }
+  };
+  
+  // Format large numbers with commas
+  const formatNumber = (num) => {
+    return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  };
+  
+  return (
+    <div className={styles.scoreSystem}>
+      <div className={styles.scoreDisplay}>
+        <h2 className={styles.scoreValue}>{formatNumber(score)}</h2>
+        <div className={styles.multiplierContainer}>
+          <span className={styles.multiplierLabel}>Multiplier</span>
+          <span className={styles.multiplierValue}>×{multiplier.toFixed(1)}</span>
+        </div>
+      </div>
+      
+      <div className={styles.streakInfo}>
+        <div className={styles.streakDisplay}>
+          <span className={styles.streakValue}>{streak}</span>
+          <span className={styles.streakLabel}>STREAK</span>
+        </div>
+        <div className={styles.maxStreakDisplay}>
+          <span className={styles.maxStreakValue}>{maxStreak}</span>
+          <span className={styles.maxStreakLabel}>MAX</span>
+        </div>
+      </div>
+      
+      {rating && (
+        <div className={`${styles.ratingDisplay} ${styles[rating.toLowerCase().replace('!', '')]}`}>
+          {rating}
+        </div>
+      )}
+    </div>
+  );
+}
