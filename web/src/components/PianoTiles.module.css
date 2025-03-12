@@ -99,6 +99,17 @@
   margin-top: 0;
 }
 
+/* Add vibration transition for smoother movement */
+.visualizerSection, .pianoSection {
+  transition: transform 0.05s ease-out;
+}
+
+/* Add styles for when the fire effect is active */
+.fireActive .visualizerSection,
+.fireActive .pianoSection {
+  box-shadow: 0 0 20px 5px rgba(0, 217, 232, 0.5);
+}
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .premiumContainer {

@@ -1,0 +1,141 @@
+.scoreSystem {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background-color: rgba(0, 0, 0, 0.7);
+  border-radius: 10px;
+  padding: 12px 15px;
+  color: white;
+  font-family: 'Geist', sans-serif;
+  z-index: 100;
+  min-width: 180px;
+  box-shadow: 0 0 20px rgba(0, 217, 232, 0.3);
+  border: 1px solid rgba(0, 217, 232, 0.2);
+  backdrop-filter: blur(4px);
+  transition: all 0.3s ease;
+}
+
+.scoreDisplay {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.scoreValue {
+  font-size: 1.8rem;
+  font-weight: 700;
+  margin: 0;
+  background: linear-gradient(90deg, #00d9e8, #00c6d4);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 0 8px rgba(0, 217, 232, 0.5);
+}
+
+.multiplierContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.multiplierLabel {
+  font-size: 0.75rem;
+  opacity: 0.7;
+  text-transform: uppercase;
+  font-weight: 500;
+}
+
+.multiplierValue {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #00d9e8;
+}
+
+.streakInfo {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding-top: 8px;
+}
+
+.streakDisplay, .maxStreakDisplay {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.streakValue, .maxStreakValue {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.streakValue {
+  color: #00d9e8;
+}
+
+.maxStreakValue {
+  color: #ffdc5d;
+}
+
+.streakLabel, .maxStreakLabel {
+  font-size: 0.7rem;
+  opacity: 0.7;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.ratingDisplay {
+  position: absolute;
+  top: -40px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(90deg, rgba(0, 217, 232, 0.7), rgba(0, 198, 212, 0.7));
+  border-radius: 20px;
+  padding: 5px 15px;
+  font-weight: 700;
+  font-size: 1.2rem;
+  box-shadow: 0 0 15px rgba(0, 217, 232, 0.5);
+  animation: fadeInOut 2s ease-in-out;
+}
+
+.perfect {
+  background: linear-gradient(90deg, rgba(255, 92, 92, 0.7), rgba(255, 140, 0, 0.7));
+  box-shadow: 0 0 15px rgba(255, 92, 92, 0.5);
+}
+
+.excellent {
+  background: linear-gradient(90deg, rgba(255, 215, 0, 0.7), rgba(255, 140, 0, 0.7));
+  box-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
+}
+
+@keyframes fadeInOut {
+  0% { opacity: 0; transform: translateX(-50%) scale(0.8); }
+  15% { opacity: 1; transform: translateX(-50%) scale(1.2); }
+  25% { transform: translateX(-50%) scale(1); }
+  75% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@media (max-width: 768px) {
+  .scoreSystem {
+    top: 5px;
+    right: 5px;
+    padding: 8px 10px;
+    min-width: 150px;
+  }
+  
+  .scoreValue {
+    font-size: 1.4rem;
+  }
+  
+  .multiplierValue {
+    font-size: 1rem;
+  }
+  
+  .streakValue, .maxStreakValue {
+    font-size: 1.2rem;
+  }
+}
