@@ -395,7 +395,7 @@ export default function PianoVisualizer() {
     transform: 'translateX(-120%)',
     zIndex: 1001,
     padding: '10px 20px',
-    backgroundColor: 'var(--primary-color)',
+    backgroundColor: '#00e5c7',
     color: 'white',
     border: 'none',
     borderRadius: '50px',

@@ -1,7 +1,8 @@
 import os
 import base64
-from basic_pitch.inference import predict
-from basic_pitch import ICASSP_2022_MODEL_PATH
+import librosa
+from piano_transcription_inference import PianoTranscription, sample_rate, load_audio
+import torch
 
 def run_inference(audio_path):
     """
@@ -13,7 +14,10 @@ def run_inference(audio_path):
     Returns:
         Dictionary with MIDI file path and base64-encoded MIDI content
     """
-    model_output, midi_data, note_events = predict(audio_path)
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    transcriptor = PianoTranscription(device=device, checkpoint_path='models/model_checkpoint.pth')
+
+    audio, _ = librosa.load(path=audio_path, sr=sample_rate, mono=True)
 
     # create temp dir
     if not os.path.exists('temp'):
@@ -21,7 +25,9 @@ def run_inference(audio_path):
 
     # save midi
     midi_path = os.path.join('temp', 'output.mid')
-    midi_data.write(midi_path)
+
+    # Transcribe and write out to MIDI file
+    transcribed_dict = transcriptor.transcribe(audio, midi_path)
     
     # Read the MIDI file and convert to base64
     with open(midi_path, "rb") as f:
