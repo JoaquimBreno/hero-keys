@@ -1,542 +1,550 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import styles from './SheetMusicVisualizer.module.css';
 
+// Constants for musical notation
+const TREBLE_CLEF = '𝄞';
+const BASS_CLEF = '𝄢';
+const WHOLE_NOTE = '𝅝';
+const HALF_NOTE = '𝅗𝅥';
+const QUARTER_NOTE = '𝅘𝅥';
+const EIGHTH_NOTE = '𝅘𝅥𝅮';
+const SHARP = '♯';
+const FLAT = '♭';
+const NATURAL = '♮';
+
+// MIDI note number to letter mapping
+const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+
+// MIDI note ranges
+const MIDI_MIN = 36; // C2
+const MIDI_MAX = 96; // C7
+const MIDDLE_C = 60;  // MIDI note number for middle C (C4)
+
 export default function SheetMusicVisualizer({ midiData, currentTime }) {
-  const canvasRef = useRef(null);
+  const containerRef = useRef(null);
+  const scrollRef = useRef(null);
+  const [visibleNotes, setVisibleNotes] = useState([]);
+  const [parsedNotes, setParsedNotes] = useState([]);
+  const [staffWidth, setStaffWidth] = useState(0);
+  const timeWindowRef = useRef(5000); // 5 seconds visible window
+  const scrollPositionRef = useRef(0);
   const animationFrameRef = useRef(null);
-  const currentTimeRef = useRef(0);
   
-  // Keep the currentTime ref updated
+  // Process MIDI data when loaded
   useEffect(() => {
-    currentTimeRef.current = currentTime;
-  }, [currentTime]);
-  
-  // Set up the canvas and start the render loop
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas || !midiData) return;
+    if (!midiData) return;
     
-    const ctx = canvas.getContext('2d');
-    
-    // Extract tempo and time signature from MIDI data
-    const { tempo, timeSignature } = extractMusicalInfo(midiData);
-    
-    // Resize canvas to match container dimensions
-    const resizeCanvas = () => {
-      const container = canvas.parentElement;
-      canvas.width = container.clientWidth;
-      canvas.height = container.clientHeight;
-    };
-    
-    resizeCanvas();
-    window.addEventListener('resize', resizeCanvas);
-    
-    // Process MIDI data once
-    const processedNotes = processMidiData(midiData);
-    
-    // Group notes into measures based on timing
-    const measuredNotes = organizeNotesIntoMeasures(processedNotes, tempo, timeSignature);
-    
-    // Start the animation loop
-    const renderFrame = () => {
-      // Always use the current value from the ref
-      drawSheetMusic(ctx, canvas.width, canvas.height, processedNotes, measuredNotes, currentTimeRef.current, tempo, timeSignature);
-      animationFrameRef.current = requestAnimationFrame(renderFrame);
-    };
-    
-    renderFrame();
-    
-    // Cleanup
-    return () => {
-      window.removeEventListener('resize', resizeCanvas);
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
-      }
-    };
-  }, [midiData]);
-  
-  // Extract tempo and time signature from MIDI data
-  function extractMusicalInfo(midiData) {
-    let tempo = 120; // Default tempo in BPM
-    let timeSignature = { numerator: 4, denominator: 4 }; // Default 4/4 time
-    
-    if (midiData && midiData.track) {
-      for (const track of midiData.track) {
-        if (!track.event) continue;
-        
-        for (const event of track.event) {
-          // Check for tempo meta event (type 255, subtype 81)
-          if (event.type === 255 && event.subtype === 81 && event.data) {
-            // Convert tempo data to BPM
-            const microsecondsPerBeat = (
-              (event.data[0] << 16) | 
-              (event.data[1] << 8) | 
-              event.data[2]
-            );
-            tempo = Math.round(60000000 / microsecondsPerBeat);
-          }
-          
-          // Check for time signature meta event (type 255, subtype 88)
-          if (event.type === 255 && event.subtype === 88 && event.data && event.data.length >= 2) {
-            timeSignature = {
-              numerator: event.data[0],
-              denominator: Math.pow(2, event.data[1])
-            };
-          }
-        }
-      }
-    }
-    
-    return { tempo, timeSignature };
-  }
-  
-  // Organize notes into measures based on timing
-  function organizeNotesIntoMeasures(notes, tempo, timeSignature) {
-    const msPerBeat = 60000 / tempo;
-    const beatsPerMeasure = timeSignature.numerator * (4 / timeSignature.denominator);
-    const msPerMeasure = msPerBeat * beatsPerMeasure;
-    
-    const measures = [];
-    let currentMeasure = [];
-    let measureIndex = 0;
-    
-    // Sort notes by start time
-    const sortedNotes = [...notes].sort((a, b) => a.startTime - b.startTime);
-    
-    sortedNotes.forEach(note => {
-      const noteMeasure = Math.floor(note.startTime / msPerMeasure);
-      
-      // If we've moved to a new measure, push the current one and start a new one
-      if (noteMeasure > measureIndex) {
-        if (currentMeasure.length > 0) {
-          measures.push({
-            index: measureIndex,
-            startTime: measureIndex * msPerMeasure,
-            endTime: (measureIndex + 1) * msPerMeasure,
-            notes: currentMeasure
-          });
-        }
-        
-        // Create empty measures for any skipped measures
-        for (let i = measureIndex + 1; i < noteMeasure; i++) {
-          measures.push({
-            index: i,
-            startTime: i * msPerMeasure,
-            endTime: (i + 1) * msPerMeasure,
-            notes: []
-          });
-        }
-        
-        currentMeasure = [note];
-        measureIndex = noteMeasure;
-      } else {
-        currentMeasure.push(note);
-      }
-    });
-    
-    // Add the last measure if it has notes
-    if (currentMeasure.length > 0) {
-      measures.push({
-        index: measureIndex,
-        startTime: measureIndex * msPerMeasure,
-        endTime: (measureIndex + 1) * msPerMeasure,
-        notes: currentMeasure
-      });
-    }
-    
-    return measures;
-  }
-  
-  // Main drawing function for the sheet music
-  function drawSheetMusic(ctx, width, height, notes, measures, currentTimeMs, tempo, timeSignature) {
-    // Clear the canvas
-    ctx.clearRect(0, 0, width, height);
-    
-    // Get the milliseconds per beat
-    const msPerBeat = 60000 / tempo;
-    const beatsPerMeasure = timeSignature.numerator * (4 / timeSignature.denominator);
-    const msPerMeasure = msPerBeat * beatsPerMeasure;
-    
-    // Configure drawing settings
-    const settings = {
-      // Layout settings
-      staffHeight: 80,                       // Height between staff top and bottom
-      lineSpacing: 10,                       // Space between lines in a staff
-      noteRadius: 6,                         // Note head radius
-      measureWidth: 200,                     // Width of a measure in pixels
-      staffYPositions: {                     // Vertical position of staves
-        treble: height * 0.3,                // Treble staff Y position
-        bass: height * 0.7                   // Bass staff Y position
-      },
-      
-      // Time and scrolling settings
-      pixelsPerMs: 0.05,                     // How many pixels per millisecond (scrolling speed)
-      pixelsPerBeat: 50,                     // How many pixels per beat
-      currentLineX: width * 0.3,             // Position of the "now" line (30% from left)
-      visibleTimeRange: {
-        past: 2000,                          // Show notes 2 seconds in the past
-        future: 4000                         // Show notes 4 seconds in the future
-      },
-      
-      // Musical time information
-      tempo: tempo,
-      timeSignature: timeSignature,
-      msPerBeat: msPerBeat,
-      msPerMeasure: msPerMeasure,
-      
-      // Visual appearance
-      colors: {
-        background: 'transparent',
-        lines: '#888',
-        text: '#fff',
-        noteDefault: '#00d9e8',
-        notePlaying: '#ff5252',
-        nowLine: '#ff5252'
-      }
-    };
-    
-    // Draw the fixed elements (clefs, staff lines)
-    drawStaves(ctx, width, settings);
-    
-    // Draw the "now" line
-    drawNowLine(ctx, height, settings);
-    
-    // Draw measure lines based on current time
-    drawMeasureLines(ctx, width, height, currentTimeMs, settings);
-    
-    // Draw the notes based on current time
-    drawNotes(ctx, width, height, notes, currentTimeMs, settings);
-  }
-  
-  // Draw staff lines and clefs
-  function drawStaves(ctx, width, settings) {
-    const { staffYPositions, lineSpacing } = settings;
-    
-    // Draw treble and bass staves
-    ctx.strokeStyle = settings.colors.lines;
-    ctx.lineWidth = 1;
-    
-    // Draw treble staff lines
-    for (let i = 0; i < 5; i++) {
-      const y = staffYPositions.treble + i * lineSpacing;
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(width, y);
-      ctx.stroke();
-    }
-    
-    // Draw bass staff lines
-    for (let i = 0; i < 5; i++) {
-      const y = staffYPositions.bass + i * lineSpacing;
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(width, y);
-      ctx.stroke();
-    }
-    
-    // Draw clef symbols
-    ctx.fillStyle = settings.colors.text;
-    ctx.font = '60px serif';
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'middle';
-    
-    // Treble clef
-    ctx.fillText('𝄞', 10, staffYPositions.treble + lineSpacing * 2);
-    
-    // Bass clef
-    ctx.fillText('𝄢', 10, staffYPositions.bass + lineSpacing * 2);
-  }
-  
-  // Draw measure lines periodically
-  function drawMeasureLines(ctx, width, height, currentTimeMs, settings) {
-    const { msPerMeasure, staffYPositions, lineSpacing, currentLineX, pixelsPerMs } = settings;
-    
-    // Find the current measure
-    const currentMeasure = Math.floor(currentTimeMs / msPerMeasure);
-    
-    // Draw measure lines before and after the current position
-    for (let i = -4; i < 8; i++) {
-      const measureTime = (currentMeasure + i) * msPerMeasure;
-      
-      // Calculate x position
-      const timeOffset = measureTime - currentTimeMs;
-      const x = currentLineX + (timeOffset * pixelsPerMs);
-      
-      // Only draw if visible
-      if (x >= 0 && x <= width) {
-        ctx.strokeStyle = settings.colors.lines;
-        ctx.lineWidth = i === 0 ? 2 : 1; // Make current measure line thicker
-        ctx.beginPath();
-        ctx.moveTo(x, staffYPositions.treble - lineSpacing);
-        ctx.lineTo(x, staffYPositions.treble + 5 * lineSpacing);
-        ctx.stroke();
-        
-        ctx.beginPath();
-        ctx.moveTo(x, staffYPositions.bass - lineSpacing);
-        ctx.lineTo(x, staffYPositions.bass + 5 * lineSpacing);
-        ctx.stroke();
-        
-        // Add measure number
-        if (i + currentMeasure >= 1) {
-          ctx.fillStyle = settings.colors.text;
-          ctx.font = '12px sans-serif';
-          ctx.textAlign = 'center';
-          ctx.fillText(String(i + currentMeasure), x, staffYPositions.treble - 15);
-        }
-        
-        // If this is a quarter note position within the measure, draw a faint line
-        for (let beat = 1; beat < settings.timeSignature.numerator; beat++) {
-          const beatTime = measureTime + (beat * settings.msPerBeat);
-          const beatOffset = beatTime - currentTimeMs;
-          const beatX = currentLineX + (beatOffset * pixelsPerMs);
-          
-          if (beatX >= 0 && beatX <= width) {
-            ctx.strokeStyle = 'rgba(136, 136, 136, 0.4)';  // Lighter version of line color
-            ctx.lineWidth = 0.5;
-            ctx.beginPath();
-            ctx.moveTo(beatX, staffYPositions.treble);
-            ctx.lineTo(beatX, staffYPositions.treble + 4 * lineSpacing);
-            ctx.stroke();
-            
-            ctx.beginPath();
-            ctx.moveTo(beatX, staffYPositions.bass);
-            ctx.lineTo(beatX, staffYPositions.bass + 4 * lineSpacing);
-            ctx.stroke();
-          }
-        }
-      }
-    }
-  }
-  
-  // Draw the vertical line indicating the current playback position
-  function drawNowLine(ctx, height, settings) {
-    // Draw "now" line
-    ctx.strokeStyle = settings.colors.nowLine;
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(settings.currentLineX, 0);
-    ctx.lineTo(settings.currentLineX, height);
-    ctx.stroke();
-  }
-  
-  // Draw the notes based on the current time
-  function drawNotes(ctx, width, height, notes, currentTimeMs, settings) {
-    const { currentLineX, pixelsPerMs, visibleTimeRange } = settings;
-    
-    // Define the time window for visible notes
-    const startTime = currentTimeMs - visibleTimeRange.past;
-    const endTime = currentTimeMs + visibleTimeRange.future;
-    
-    // Draw only notes within our visible time window
-    notes.forEach(note => {
-      // Only draw notes within the visible time range
-      if (note.startTime < endTime && (note.startTime + note.duration) > startTime) {
-        // Calculate x position based on time difference from current time
-        const timeOffset = note.startTime - currentTimeMs;
-        const x = currentLineX + (timeOffset * pixelsPerMs);
-        
-        // Position within the measure (for better visual distribution)
-        const measureStartTime = Math.floor(note.startTime / settings.msPerMeasure) * settings.msPerMeasure;
-        const timeIntoMeasure = note.startTime - measureStartTime;
-        const measureProgress = timeIntoMeasure / settings.msPerMeasure; // 0 to 1
-        
-        // Calculate note width based on duration (for longer notes)
-        const noteWidth = note.duration * pixelsPerMs;
-        
-        // Only draw if the note is visible on screen
-        if (x >= 0 && x <= width) {
-          // Determine if the note is currently playing
-          const isPlaying = (note.startTime <= currentTimeMs && 
-                           (note.startTime + note.duration) >= currentTimeMs);
-          
-          // Draw the note
-          drawNote(ctx, x, note.midiNote, isPlaying, settings, noteWidth);
-        }
-      }
-    });
-  }
-  
-  // Draw an individual note
-  function drawNote(ctx, x, midiNote, isPlaying, settings, noteWidth = 0) {
-    const { staffYPositions, lineSpacing, noteRadius } = settings;
-    
-    // Calculate y position based on MIDI note number
-    // Middle C is MIDI note 60
-    let y;
-    if (midiNote >= 60) {
-      // Treble clef (higher notes)
-      // Middle C is positioned on the 1st ledger line below the treble staff
-      const stepsFromMiddleC = midiNote - 60;
-      y = staffYPositions.treble + 5 * lineSpacing - (stepsFromMiddleC * lineSpacing / 2);
-    } else {
-      // Bass clef (lower notes)
-      // Middle C is positioned on the 1st ledger line above the bass staff
-      const stepsFromMiddleC = 60 - midiNote;
-      y = staffYPositions.bass - lineSpacing + (stepsFromMiddleC * lineSpacing / 2);
-    }
-    
-    // Draw ledger lines if needed
-    ctx.strokeStyle = settings.colors.lines;
-    ctx.lineWidth = 1;
-    
-    // Ledger lines above treble staff
-    if (midiNote >= 60 && y < staffYPositions.treble - lineSpacing) {
-      const linesNeeded = Math.floor((staffYPositions.treble - y) / lineSpacing) + 1;
-      for (let i = 1; i <= linesNeeded; i++) {
-        const lineY = staffYPositions.treble - i * lineSpacing;
-        if (Math.abs(y - lineY) < 2) { // Only draw if note is on this line
-          ctx.beginPath();
-          ctx.moveTo(x - 10, lineY);
-          ctx.lineTo(x + 10, lineY);
-          ctx.stroke();
-        }
-      }
-    }
-    
-    // Ledger lines below treble staff
-    if (midiNote >= 60 && y > staffYPositions.treble + 4 * lineSpacing) {
-      const linesNeeded = Math.floor((y - staffYPositions.treble - 4 * lineSpacing) / lineSpacing) + 1;
-      for (let i = 1; i <= linesNeeded; i++) {
-        const lineY = staffYPositions.treble + 4 * lineSpacing + i * lineSpacing;
-        if (Math.abs(y - lineY) < 2) {
-          ctx.beginPath();
-          ctx.moveTo(x - 10, lineY);
-          ctx.lineTo(x + 10, lineY);
-          ctx.stroke();
-        }
-      }
-    }
-    
-    // Ledger lines above bass staff
-    if (midiNote < 60 && y < staffYPositions.bass - lineSpacing) {
-      const linesNeeded = Math.floor((staffYPositions.bass - y) / lineSpacing) + 1;
-      for (let i = 1; i <= linesNeeded; i++) {
-        const lineY = staffYPositions.bass - i * lineSpacing;
-        if (Math.abs(y - lineY) < 2) {
-          ctx.beginPath();
-          ctx.moveTo(x - 10, lineY);
-          ctx.lineTo(x + 10, lineY);
-          ctx.stroke();
-        }
-      }
-    }
-    
-    // Ledger lines below bass staff
-    if (midiNote < 60 && y > staffYPositions.bass + 4 * lineSpacing) {
-      const linesNeeded = Math.floor((y - staffYPositions.bass - 4 * lineSpacing) / lineSpacing) + 1;
-      for (let i = 1; i <= linesNeeded; i++) {
-        const lineY = staffYPositions.bass + 4 * lineSpacing + i * lineSpacing;
-        if (Math.abs(y - lineY) < 2) {
-          ctx.beginPath();
-          ctx.moveTo(x - 10, lineY);
-          ctx.lineTo(x + 10, lineY);
-          ctx.stroke();
-        }
-      }
-    }
-    
-    // Draw note head
-    ctx.fillStyle = isPlaying ? settings.colors.notePlaying : settings.colors.noteDefault;
-    ctx.beginPath();
-    
-    // If it's a long note, draw an extended note shape
-    if (noteWidth > noteRadius * 3) {
-      // For longer notes, draw elongated shape
-      const halfHeight = noteRadius * 0.8;
-      
-      // Draw rounded rectangle
-      ctx.beginPath();
-      ctx.moveTo(x - noteRadius, y - halfHeight);
-      ctx.lineTo(x + Math.min(noteWidth, 30), y - halfHeight); // Cap the visible width
-      ctx.ellipse(x + Math.min(noteWidth, 30), y, noteRadius, halfHeight, 0, -Math.PI / 2, Math.PI / 2);
-      ctx.lineTo(x - noteRadius, y + halfHeight);
-      ctx.ellipse(x - noteRadius, y, noteRadius, halfHeight, 0, Math.PI / 2, -Math.PI / 2);
-      ctx.fill();
-    } else {
-      // Regular note head for short notes
-      ctx.ellipse(x, y, noteRadius, noteRadius * 0.8, Math.PI / 4, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    
-    // Draw stem
-    const stemDirection = y < (staffYPositions.treble + staffYPositions.bass) / 2 ? 1 : -1; // down for high notes, up for low
-    ctx.strokeStyle = isPlaying ? settings.colors.notePlaying : settings.colors.noteDefault;
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(x + (stemDirection < 0 ? -noteRadius : noteRadius), y);
-    ctx.lineTo(x + (stemDirection < 0 ? -noteRadius : noteRadius), y + stemDirection * 30);
-    ctx.stroke();
-  }
-  
-  // Process MIDI data to extract note timing information
-  function processMidiData(midiData) {
+    // Parse all notes from MIDI data
     const notes = [];
     
-    if (!midiData || !midiData.track) return notes;
+    midiData.tracks.forEach(track => {
+      if (track.notes && track.notes.length > 0) {
+        track.notes.forEach(note => {
+          // Only include notes within our range (C2-C7)
+          if (note.midi >= MIDI_MIN && note.midi <= MIDI_MAX) {
+            notes.push({
+              midi: note.midi,
+              startTime: note.time * 1000, // Convert to ms
+              endTime: (note.time + note.duration) * 1000, // Convert to ms
+              duration: note.duration * 1000, // Convert to ms
+              velocity: note.velocity,
+              name: NOTE_NAMES[note.midi % 12],
+              octave: Math.floor(note.midi / 12) - 1,
+              // Determine if note belongs to treble or bass clef
+              clef: note.midi >= MIDDLE_C ? 'treble' : 'bass'
+            });
+          }
+        });
+      }
+    });
     
-    const notesOn = {}; // Track active notes to find their end times
+    // Sort notes by start time
+    notes.sort((a, b) => a.startTime - b.startTime);
     
-    // Process all MIDI events
-    midiData.track.forEach(track => {
-      if (!track.event) return;
+    setParsedNotes(notes);
+    
+    // Log first few notes for debugging
+    if (notes.length > 0) {
+      console.log("First 5 notes:", notes.slice(0, 5));
+    }
+  }, [midiData]);
+  
+  // Handle container resize
+  useEffect(() => {
+    if (!containerRef.current) return;
+    
+    const updateDimensions = () => {
+      if (containerRef.current) {
+        const width = containerRef.current.clientWidth;
+        setStaffWidth(width);
+      }
+    };
+    
+    updateDimensions();
+    window.addEventListener('resize', updateDimensions);
+    
+    return () => {
+      window.removeEventListener('resize', updateDimensions);
+    };
+  }, []);
+  
+  // Update visible notes and scroll position based on current time
+  useEffect(() => {
+    if (!parsedNotes.length || !containerRef.current) return;
+    
+    // Calculate the visible time window
+    const timeWindow = timeWindowRef.current;
+    const startTime = Math.max(0, currentTime - timeWindow * 0.2); // 20% of window for past notes
+    const endTime = currentTime + timeWindow * 0.8; // 80% of window for future notes
+    
+    // Filter notes that fall within the visible time window
+    const visible = parsedNotes.filter(note => 
+      (note.startTime <= endTime && note.endTime >= startTime)
+    );
+    
+    setVisibleNotes(visible);
+    
+    // Calculate scroll position (pixels per millisecond)
+    const pixelsPerMs = staffWidth / timeWindow;
+    const scrollPosition = currentTime * pixelsPerMs;
+    scrollPositionRef.current = scrollPosition;
+    
+    // Update scroll position of the staff
+    if (scrollRef.current) {
+      scrollRef.current.scrollLeft = scrollPosition - (staffWidth * 0.2); // Keep current time at 20% from left
+    }
+  }, [currentTime, parsedNotes, staffWidth]);
+  
+  // Determine note position on the staff based on MIDI note number
+  const getNotePosition = (midiNote) => {
+    // Middle C (MIDI 60) positioning
+    // On treble clef, Middle C is first ledger line below staff
+    // On bass clef, Middle C is first ledger line above staff
+    
+    if (midiNote >= MIDDLE_C) {
+      // Treble clef
+      // E4 (MIDI 64) is bottom line of treble staff
+      return {
+        clef: 'treble',
+        linePosition: 5 - Math.floor((midiNote - 64) / 2)
+      };
+    } else {
+      // Bass clef
+      // G2 (MIDI 43) is bottom line of bass staff
+      return {
+        clef: 'bass',
+        linePosition: 5 - Math.floor((midiNote - 43) / 2)
+      };
+    }
+  };
+  
+  // Determine note duration symbol
+  const getNoteDurationSymbol = (duration) => {
+    // Duration is in milliseconds
+    if (duration >= 1500) return WHOLE_NOTE;
+    if (duration >= 750) return HALF_NOTE;
+    if (duration >= 375) return QUARTER_NOTE;
+    return EIGHTH_NOTE;
+  };
+  
+  // Get accidental for a note
+  const getAccidental = (noteName) => {
+    if (noteName.includes('#')) return SHARP;
+    if (noteName.includes('b')) return FLAT;
+    return '';
+  };
+  
+  // Group notes into chords based on start time (within small threshold)
+  const groupNotesIntoChords = (notes) => {
+    const chords = [];
+    const threshold = 30; // ms threshold for considering notes part of the same chord
+    
+    notes.forEach(note => {
+      // Find an existing chord that this note could belong to
+      const existingChord = chords.find(
+        chord => Math.abs(chord[0].startTime - note.startTime) < threshold
+      );
       
-      track.event.forEach(event => {
-        // Note on event (type 9 with velocity > 0)
-        if (event.type === 9 && event.data[1] > 0) {
-          const midiNote = event.data[0];
-          const velocity = event.data[1];
-          const startTime = event.playTime || 0;
-          
-          // Track this note as active
-          notesOn[midiNote] = { startTime, velocity };
+      if (existingChord) {
+        existingChord.push(note);
+      } else {
+        chords.push([note]);
+      }
+    });
+    
+    return chords;
+  };
+  
+  // Calculate x-position for a note based on time
+  const getXPosition = (noteTime) => {
+    const pixelsPerMs = staffWidth / timeWindowRef.current;
+    return (noteTime - (currentTime - timeWindowRef.current * 0.2)) * pixelsPerMs;
+  };
+  
+  // Render staff lines
+  const renderStaffLines = () => {
+    const trebleStaffTop = 50;
+    const bassStaffTop = 200;
+    const staffLineSpacing = 10;
+    
+    // Calculate total width needed based on the latest note
+    const lastNoteTime = parsedNotes.length > 0 ? 
+      parsedNotes[parsedNotes.length - 1].endTime : 0;
+    
+    const totalWidth = Math.max(
+      staffWidth * 2,
+      getXPosition(lastNoteTime + 2000) // Add 2 seconds padding after last note
+    );
+    
+    return (
+      <>
+        {/* Treble staff lines */}
+        {Array.from({ length: 5 }).map((_, i) => (
+          <line
+            key={`treble-line-${i}`}
+            x1="0"
+            y1={trebleStaffTop + i * staffLineSpacing}
+            x2={totalWidth}
+            y2={trebleStaffTop + i * staffLineSpacing}
+            stroke="#888"
+            strokeWidth="1"
+          />
+        ))}
+        
+        {/* Bass staff lines */}
+        {Array.from({ length: 5 }).map((_, i) => (
+          <line
+            key={`bass-line-${i}`}
+            x1="0"
+            y1={bassStaffTop + i * staffLineSpacing}
+            x2={totalWidth}
+            y2={bassStaffTop + i * staffLineSpacing}
+            stroke="#888"
+            strokeWidth="1"
+          />
+        ))}
+        
+        {/* Treble clef */}
+        <text
+          x="20"
+          y={trebleStaffTop + 20}
+          fontSize="40"
+          fill="#00d9e8"
+          fontFamily="serif"
+        >
+          {TREBLE_CLEF}
+        </text>
+        
+        {/* Bass clef */}
+        <text
+          x="20"
+          y={bassStaffTop + 20}
+          fontSize="40"
+          fill="#00d9e8"
+          fontFamily="serif"
+        >
+          {BASS_CLEF}
+        </text>
+        
+        {/* Current position line */}
+        <line
+          x1={staffWidth * 0.2}
+          y1="30"
+          x2={staffWidth * 0.2}
+          y2="280"
+          stroke="#ff5252"
+          strokeWidth="2"
+          strokeDasharray="5,5"
+        />
+        
+        {/* Render measure lines */}
+        {renderMeasureLines(totalWidth)}
+      </>
+    );
+  };
+  
+  // Render measure lines based on time signature
+  const renderMeasureLines = (totalWidth) => {
+    // Extract time signature from MIDI data or use default 4/4
+    let timeSignature = { numerator: 4, denominator: 4 }; // Default 4/4 time
+    let tempo = 120; // Default tempo in BPM
+    
+    if (midiData && midiData.header) {
+      if (midiData.header.timeSignatures && midiData.header.timeSignatures.length > 0) {
+        const ts = midiData.header.timeSignatures[0];
+        timeSignature = {
+          numerator: ts.timeSignature[0],
+          denominator: ts.timeSignature[1]
+        };
+      }
+      
+      if (midiData.header.tempos && midiData.header.tempos.length > 0) {
+        tempo = midiData.header.tempos[0].bpm;
+      }
+    }
+    
+    // Calculate milliseconds per measure
+    const beatsPerMinute = tempo;
+    const millisecondsPerBeat = 60000 / beatsPerMinute;
+    const beatsPerMeasure = timeSignature.numerator * (4 / timeSignature.denominator);
+    const millisecondsPerMeasure = millisecondsPerBeat * beatsPerMeasure;
+    
+    const measureLines = [];
+    const measureTextLabels = [];
+    const beatLines = [];
+    
+    // Calculate how many measures we need to draw
+    const startMeasure = Math.floor((currentTime - timeWindowRef.current * 0.2) / millisecondsPerMeasure);
+    const endMeasure = Math.ceil((currentTime + timeWindowRef.current * 0.8) / millisecondsPerMeasure);
+    
+    // Generate measure lines
+    for (let i = startMeasure; i <= endMeasure; i++) {
+      const measureTime = i * millisecondsPerMeasure;
+      const xPos = getXPosition(measureTime);
+      
+      if (xPos >= 0 && xPos <= totalWidth) {
+        // Main measure line
+        measureLines.push(
+          <line
+            key={`measure-${i}`}
+            x1={xPos}
+            y1="40"
+            x2={xPos}
+            y2="260"
+            stroke={i % 4 === 0 ? "#aaa" : "#888"}
+            strokeWidth={i % 4 === 0 ? "2" : "1"}
+          />
+        );
+        
+        // Measure number
+        if (i >= 0 && i % 4 === 0) {
+          measureTextLabels.push(
+            <text
+              key={`measure-text-${i}`}
+              x={xPos + 5}
+              y="35"
+              fontSize="12"
+              fill="#00d9e8"
+            >
+              {i}
+            </text>
+          );
         }
         
-        // Note off event (type 8 or type 9 with velocity 0)
-        if (event.type === 8 || (event.type === 9 && event.data[1] === 0)) {
-          const midiNote = event.data[0];
-          const endTime = event.playTime || 0;
+        // Beat lines within each measure
+        for (let beat = 1; beat < beatsPerMeasure; beat++) {
+          const beatTime = measureTime + beat * millisecondsPerBeat;
+          const beatXPos = getXPosition(beatTime);
           
-          // If we've seen this note turned on before
-          if (notesOn[midiNote]) {
-            const { startTime, velocity } = notesOn[midiNote];
-            const duration = endTime - startTime;
-            
-            notes.push({
-              midiNote,
-              startTime,
-              duration,
-              velocity
-            });
-            
-            // Remove from active notes
-            delete notesOn[midiNote];
+          if (beatXPos >= 0 && beatXPos <= totalWidth) {
+            beatLines.push(
+              <line
+                key={`beat-${i}-${beat}`}
+                x1={beatXPos}
+                y1="50"
+                x2={beatXPos}
+                y2="250"
+                stroke="#555"
+                strokeWidth="0.5"
+                strokeDasharray="3,3"
+              />
+            );
           }
         }
+      }
+    }
+    
+    return [...measureLines, ...measureTextLabels, ...beatLines];
+  };
+  
+  // Render visible notes with proper musical notation
+  const renderNotes = () => {
+    const trebleStaffTop = 50;
+    const bassStaffTop = 200;
+    const staffLineSpacing = 10;
+    
+    // Group notes into chords
+    const chords = groupNotesIntoChords(visibleNotes);
+    
+    return chords.map((chord, chordIndex) => {
+      // Sort chord notes from lowest to highest
+      chord.sort((a, b) => a.midi - b.midi);
+      
+      const firstNote = chord[0];
+      const xPos = getXPosition(firstNote.startTime);
+      
+      // Skip notes that would be off-screen
+      if (xPos < 0 || xPos > staffWidth) return null;
+      
+      // Check if the chord is currently playing
+      const isActive = firstNote.startTime <= currentTime && 
+                      firstNote.endTime >= currentTime;
+      
+      // Render each note in the chord
+      return chord.map((note, noteIndex) => {
+        const { clef, linePosition } = getNotePosition(note.midi);
+        const yBase = clef === 'treble' ? trebleStaffTop : bassStaffTop;
+        const y = yBase + linePosition * staffLineSpacing / 2;
+        
+        // Note symbol based on duration
+        const noteSymbol = getNoteDurationSymbol(note.duration);
+        const accidental = getAccidental(note.name);
+        
+        // Calculate stem direction (up for lower staff position, down for higher)
+        const stemDirection = linePosition > 0 ? 'up' : 'down';
+        
+        // Calculate horizontal offset for chord notes to avoid overlapping
+        const offsetX = chordIndex === 0 ? 0 : noteIndex * 2;
+        
+        // Determine if we need to draw ledger lines
+        const needsLedgerLines = 
+          (clef === 'treble' && (linePosition < -1 || linePosition > 9)) ||
+          (clef === 'bass' && (linePosition < -1 || linePosition > 9));
+        
+        // Calculate ledger line positions if needed
+        const ledgerLines = [];
+        if (needsLedgerLines) {
+          if (clef === 'treble') {
+            // Ledger lines below treble staff
+            if (linePosition > 9) {
+              const startLine = 10;
+              const endLine = Math.ceil(linePosition / 2) * 2;
+              for (let i = startLine; i <= endLine; i += 2) {
+                ledgerLines.push(
+                  <line
+                    key={`ledger-${chordIndex}-${noteIndex}-${i}`}
+                    x1={xPos - 10}
+                    y1={yBase + i * staffLineSpacing / 2}
+                    x2={xPos + 10}
+                    y2={yBase + i * staffLineSpacing / 2}
+                    stroke="#888"
+                    strokeWidth="1"
+                  />
+                );
+              }
+            }
+            // Ledger lines above treble staff
+            if (linePosition < -1) {
+              const startLine = -2;
+              const endLine = Math.floor(linePosition / 2) * 2;
+              for (let i = startLine; i >= endLine; i -= 2) {
+                ledgerLines.push(
+                  <line
+                    key={`ledger-${chordIndex}-${noteIndex}-${i}`}
+                    x1={xPos - 10}
+                    y1={yBase + i * staffLineSpacing / 2}
+                    x2={xPos + 10}
+                    y2={yBase + i * staffLineSpacing / 2}
+                    stroke="#888"
+                    strokeWidth="1"
+                  />
+                );
+              }
+            }
+          } else { // Bass clef
+            // Ledger lines below bass staff
+            if (linePosition > 9) {
+              const startLine = 10;
+              const endLine = Math.ceil(linePosition / 2) * 2;
+              for (let i = startLine; i <= endLine; i += 2) {
+                ledgerLines.push(
+                  <line
+                    key={`ledger-${chordIndex}-${noteIndex}-${i}`}
+                    x1={xPos - 10}
+                    y1={yBase + i * staffLineSpacing / 2}
+                    x2={xPos + 10}
+                    y2={yBase + i * staffLineSpacing / 2}
+                    stroke="#888"
+                    strokeWidth="1"
+                  />
+                );
+              }
+            }
+            // Ledger lines above bass staff
+            if (linePosition < -1) {
+              const startLine = -2;
+              const endLine = Math.floor(linePosition / 2) * 2;
+              for (let i = startLine; i >= endLine; i -= 2) {
+                ledgerLines.push(
+                  <line
+                    key={`ledger-${chordIndex}-${noteIndex}-${i}`}
+                    x1={xPos - 10}
+                    y1={yBase + i * staffLineSpacing / 2}
+                    x2={xPos + 10}
+                    y2={yBase + i * staffLineSpacing / 2}
+                    stroke="#888"
+                    strokeWidth="1"
+                  />
+                );
+              }
+            }
+          }
+        }
+        
+        return (
+          <g 
+            key={`note-${chordIndex}-${noteIndex}`}
+            className={isActive ? styles.activeNote : ''}
+          >
+            {/* Render ledger lines if needed */}
+            {ledgerLines}
+            
+            {/* Render accidental if needed */}
+            {accidental && (
+              <text
+                x={xPos - 15}
+                y={y}
+                fontSize="24"
+                fill={isActive ? "#ff5252" : "#00d9e8"}
+                fontFamily="serif"
+              >
+                {accidental}
+              </text>
+            )}
+            
+            {/* Render note head */}
+            <text
+              x={xPos + offsetX}
+              y={y}
+              fontSize="24"
+              fill={isActive ? "#ff5252" : "#00d9e8"}
+              fontFamily="serif"
+              textAnchor="middle"
+            >
+              {noteSymbol}
+            </text>
+            
+            {/* Render note stem (for quarter and eighth notes) */}
+            {(noteSymbol === QUARTER_NOTE || noteSymbol === EIGHTH_NOTE) && (
+              <line
+                x1={xPos + offsetX + (stemDirection === 'up' ? -8 : 8)}
+                y1={y - (stemDirection === 'up' ? 0 : 10)}
+                x2={xPos + offsetX + (stemDirection === 'up' ? -8 : 8)}
+                y2={y + (stemDirection === 'up' ? -30 : 30)}
+                stroke={isActive ? "#ff5252" : "#00d9e8"}
+                strokeWidth="2"
+              />
+            )}
+          </g>
+        );
       });
     });
-    
-    // Add any still-active notes with an estimated duration
-    Object.keys(notesOn).forEach(midiNote => {
-      const { startTime, velocity } = notesOn[midiNote];
-      notes.push({
-        midiNote: parseInt(midiNote),
-        startTime,
-        duration: 500, // Default to 500ms if no note-off was found
-        velocity
-      });
-    });
-    
-    return notes;
-  }
-
+  };
+  
   return (
     <div className={styles.sheetMusicContainer}>
       <div className={styles.sheetMusicHeader}>Piano Score</div>
-      <div className={styles.sheetMusicContent}>
-        <canvas 
-          ref={canvasRef} 
-          className={styles.sheetMusicCanvas}
-        />
+      <div className={styles.sheetMusicContent} ref={scrollRef}>
+        <div className={styles.staffContainer} ref={containerRef}>
+          <svg 
+            className={styles.staffSvg} 
+            viewBox={`0 0 ${staffWidth} 300`}
+            preserveAspectRatio="xMinYMin meet"
+          >
+            {renderStaffLines()}
+            {renderNotes()}
+          </svg>
+        </div>
       </div>
     </div>
   );

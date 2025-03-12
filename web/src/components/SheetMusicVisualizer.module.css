@@ -22,9 +22,30 @@
 .sheetMusicContent {
   flex: 1;
   width: 100%;
-  height: 100%;
-  position: relative;
-  overflow: hidden;
+  background: transparent;
+  overflow-x: auto;
+  overflow-y: hidden;
+  white-space: nowrap;
+  color: white;
+  scroll-behavior: smooth;
+  will-change: scroll-position;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: #00d9e8 rgba(255, 255, 255, 0.1);
+}
+
+.sheetMusicContent::-webkit-scrollbar {
+  height: 8px;
+}
+
+.sheetMusicContent::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+.sheetMusicContent::-webkit-scrollbar-thumb {
+  background-color: #00d9e8;
+  border-radius: 4px;
 }
 
 .sheetMusicCanvas {
@@ -36,19 +57,65 @@
   left: 0;
 }
 
-.sheetMusicContent {
+.staffContainer {
+  min-width: 100%;
+  height: 100%;
+  padding: 10px 0;
+  position: relative;
+}
+
+.staffSvg {
   width: 100%;
-  flex: 1;
-  background: transparent;
-  padding: 20px 10px;
-  overflow-x: auto;
-  overflow-y: hidden;
-  white-space: nowrap;
-  color: white;
-  scroll-behavior: smooth;
-  /* Prevent content flash during scroll */
-  will-change: scroll-position;
-  -webkit-overflow-scrolling: touch;
+  min-width: 1000px;
+  min-height: 300px;
+  display: block;
+}
+
+/* Active note styling with glow effect */
+.activeNote {
+  filter: drop-shadow(0 0 5px #ff5252);
+}
+
+/* Treble and bass clef areas */
+.trebleStaff, .bassStaff {
+  stroke: #888;
+  stroke-width: 1;
+}
+
+/* Note styling */
+.note {
+  fill: #00d9e8;
+  stroke: none;
+}
+
+.note.active {
+  fill: #ff5252;
+  filter: drop-shadow(0 0 5px #ff5252);
+}
+
+/* Piano split marker */
+.middleCMarker {
+  stroke: rgba(255, 255, 255, 0.5);
+  stroke-width: 0.5;
+  stroke-dasharray: 5, 5;
+}
+
+/* Measure line styling */
+.measureLine {
+  stroke: #888;
+  stroke-width: 1;
+}
+
+.measureLine.strong {
+  stroke: #aaa;
+  stroke-width: 2;
+}
+
+/* Beat line styling */
+.beatLine {
+  stroke: #555;
+  stroke-width: 0.5;
+  stroke-dasharray: 3, 3;
 }
 
 /* Override ABC.js styles for better dark theme appearance */
