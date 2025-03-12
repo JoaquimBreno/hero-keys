@@ -288,7 +288,7 @@ const AudioPlayer = forwardRef(({
             aria-label="Audio Volume"
             title="Audio Volume"
           >
-            <img src={getVolumeIcon(audioVolume)} alt="Audio Volume" />
+            <img src={ICON_PATHS.mute} alt="Audio Volume" />
           </button>
           
           {showVolumeControls && volumeControlType === 'audio' && (
