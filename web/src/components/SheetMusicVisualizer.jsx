@@ -533,7 +533,7 @@ export default function SheetMusicVisualizer({ midiData, currentTime }) {
   
   return (
     <div className={styles.sheetMusicContainer}>
-      <div className={styles.sheetMusicHeader}>Piano Score</div>
+      <div className={styles.sheetMusicHeader}>Sheet Music</div>
       <div className={styles.sheetMusicContent} ref={scrollRef}>
         <div className={styles.staffContainer} ref={containerRef}>
           <svg 

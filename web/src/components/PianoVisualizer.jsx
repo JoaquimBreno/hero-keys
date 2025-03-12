@@ -396,7 +396,7 @@ export default function PianoVisualizer() {
     zIndex: 1001,
     padding: '10px 20px',
     backgroundColor: '#00e5c7',
-    color: 'white',
+    color: 'black',
     border: 'none',
     borderRadius: '50px',
     cursor: 'pointer',
