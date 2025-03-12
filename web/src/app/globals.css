@@ -78,7 +78,7 @@ p {
 }
 
 .piano-container {
-  width: 100%;
+  width: 50%;
   height: 400px;
   margin-bottom: 30px;
   border-radius: var(--border-radius);

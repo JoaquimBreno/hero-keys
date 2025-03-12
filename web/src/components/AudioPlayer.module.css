@@ -152,3 +152,30 @@
 .rateButton:active {
   transform: scale(0.95);
 }
+
+/* Add these styles to existing CSS */
+
+.controlButton svg,
+.playButton svg,
+.toggleButton svg {
+  width: 20px;
+  height: 20px;
+  fill: currentColor;
+  stroke: currentColor;
+}
+
+.controlButton,
+.playButton,
+.toggleButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Ensure proper color inheritance */
+.activeMute svg,
+.midiSoundDisabled svg,
+.chordsActive svg,
+.sheetMusicActive svg {
+  color: inherit;
+}
