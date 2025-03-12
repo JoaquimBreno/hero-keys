@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 // Removed Script import since we don't need it
 import styles from './PianoVisualizer.module.css';
 import * as Tone from 'tone';
@@ -412,6 +412,16 @@ export default function PianoVisualizer() {
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
 
+  // Memoize the data passed to PianoTilesContainer to prevent unnecessary re-renders
+  const pianoTilesProps = useMemo(() => ({
+    midiData: midiLoaded,
+    fileName,
+    audioData: audioFile,
+    autoOpenMidiConnector: true,
+    chordsData,
+    renderChords: !!chordsData
+  }), [midiLoaded, fileName, audioFile, chordsData]);
+
   return (
     <>
       {midiLoaded ? (
@@ -427,14 +437,7 @@ export default function PianoVisualizer() {
             </div>
             
             <div className={styles.visualizationContainer}>
-              <PianoTilesContainer
-                midiData={midiLoaded} 
-                fileName={fileName}
-                audioData={audioFile}
-                autoOpenMidiConnector={true}
-                chordsData={chordsData} 
-                renderChords={!!chordsData} // Add a boolean flag to control chord rendering
-              />
+              <PianoTilesContainer {...pianoTilesProps} />
             </div>
             
             <button 
