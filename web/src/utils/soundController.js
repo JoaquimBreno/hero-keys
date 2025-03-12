@@ -6,12 +6,28 @@
 // Cache for preloaded sounds
 const soundCache = new Map();
 
+// Loading status to prevent duplicate loading requests
+const loadingStatus = new Map();
+
 // Default volumes for different sound types
 const DEFAULT_VOLUMES = {
   wrongNote: 0.3,
   streak: 0.5,
   perfect: 0.7,
   general: 0.5
+};
+
+/**
+ * Normalize asset path to ensure proper loading
+ * @param {string} path - Path to the sound file
+ * @returns {string} - Normalized path
+ */
+const normalizePath = (path) => {
+  // If path doesn't start with http/https and doesn't start with a slash, add one
+  if (!path.match(/^(http|https):\/\//) && !path.startsWith('/')) {
+    return `/${path}`;
+  }
+  return path;
 };
 
 /**
@@ -22,17 +38,32 @@ const DEFAULT_VOLUMES = {
  * @returns {Promise} - Promise resolving when sound is loaded
  */
 export const preloadSound = (soundId, url, volume = DEFAULT_VOLUMES.general) => {
-  return new Promise((resolve, reject) => {
+  // If already loaded, return cached promise
+  if (soundCache.has(soundId)) {
+    return Promise.resolve(soundCache.get(soundId));
+  }
+  
+  // If currently loading, return the existing promise
+  if (loadingStatus.has(soundId)) {
+    return loadingStatus.get(soundId);
+  }
+  
+  const normalizedUrl = normalizePath(url);
+  
+  const loadPromise = new Promise((resolve, reject) => {
     try {
-      const audio = new Audio(url);
+      const audio = new Audio(normalizedUrl);
       audio.volume = volume;
+      
       audio.addEventListener('canplaythrough', () => {
         soundCache.set(soundId, audio);
+        loadingStatus.delete(soundId);
         resolve(audio);
       }, { once: true });
       
       audio.addEventListener('error', (e) => {
-        console.error(`Error loading sound ${soundId}:`, e);
+        console.error(`Error loading sound ${soundId} from ${normalizedUrl}:`, e);
+        loadingStatus.delete(soundId);
         reject(e);
       });
       
@@ -40,9 +71,15 @@ export const preloadSound = (soundId, url, volume = DEFAULT_VOLUMES.general) => 
       audio.load();
     } catch (err) {
       console.error(`Exception loading sound ${soundId}:`, err);
+      loadingStatus.delete(soundId);
       reject(err);
     }
   });
+  
+  // Store the loading promise
+  loadingStatus.set(soundId, loadPromise);
+  
+  return loadPromise;
 };
 
 /**
@@ -79,16 +116,26 @@ export const playSound = (soundId, volume = null) => {
  * Preload all game sound effects
  */
 export const preloadAllSounds = async () => {
+  // If all sounds are already loaded, return immediately
+  if (
+    soundCache.has('wrongNote') && 
+    soundCache.has('streak') && 
+    soundCache.has('perfect')
+  ) {
+    return true;
+  }
+
   try {
     await Promise.all([
-      preloadSound('wrongNote', '/sounds/wrong-note.mp3', DEFAULT_VOLUMES.wrongNote),
-      preloadSound('streak', '/sounds/streak.mp3', DEFAULT_VOLUMES.streak),
-      preloadSound('perfect', '/sounds/perfect.mp3', DEFAULT_VOLUMES.perfect)
+      preloadSound('wrongNote', 'sounds/wrong-note.mp3', DEFAULT_VOLUMES.wrongNote),
+      preloadSound('streak', 'sounds/streak.mp3', DEFAULT_VOLUMES.streak),
+      preloadSound('perfect', 'sounds/perfect.mp3', DEFAULT_VOLUMES.perfect)
     ]);
     console.log('All sounds preloaded successfully');
     return true;
   } catch (err) {
     console.error('Error preloading sounds:', err);
+    // Don't throw - return false to indicate failure but allow app to continue
     return false;
   }
 };

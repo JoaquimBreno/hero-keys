@@ -7,8 +7,8 @@ import { preloadSound, playSound } from '../utils/soundController';
 const STREAK_THRESHOLD = 8; // Number of consecutive correct notes to trigger fire effect
 const PERFECT_THRESHOLD = 15; // Number of consecutive correct notes for "Perfect" rating
 const VIBRATION_THRESHOLD = 5; // When to start vibrating the piano
-const POINTS_BASE = 100; // Base points for a correct note
-const POINTS_MULTIPLIER_INCREMENT = 0.1; // How much multiplier increases per correct note
+const POINTS_BASE = 100; // Base points for a correct chord/set of simultaneous notes
+const POINTS_MULTIPLIER_INCREMENT = 0.1; // How much multiplier increases per correct chord
 const MAX_MULTIPLIER = 5.0; // Maximum score multiplier
 
 // Sound effects
@@ -31,6 +31,7 @@ export default function ScoreSystem({
   const [rating, setRating] = useState('');
   const [showFireEffect, setShowFireEffect] = useState(false);
   const [vibrationLevel, setVibrationLevel] = useState(0);
+  const vibrationTimeoutRef = useRef(null);
   
   // Refs to track state without rerenders
   const scoreRef = useRef(score);
@@ -103,31 +104,29 @@ export default function ScoreSystem({
     const activeNotes = new Set(playedMidiNotes);
     const lastPlayedNotes = lastPlayedNotesRef.current;
     
-    // Find newly pressed notes (not in last update)
-    const newNotes = new Set(
-      [...activeNotes].filter(note => !lastPlayedNotes.has(note))
-    );
-    
-    // Process new notes to see if they were correct or wrong
-    if (newNotes.size > 0) {
-      let correctHits = 0;
-      let wrongHits = 0;
+    // Only process if the active notes changed
+    if (activeNotes.size !== lastPlayedNotes.size || 
+        [...activeNotes].some(note => !lastPlayedNotes.has(note))) {
       
-      newNotes.forEach(note => {
-        if (expectedNotes.has(note)) {
-          correctHits++;
-        } else {
-          wrongHits++;
-        }
-      });
+      // Check if all expected notes are played (and no extra wrong notes)
+      const allExpectedNotesPlayed = 
+        expectedNotes.size > 0 && // There are expected notes to play
+        activeNotes.size === expectedNotes.size && // Same number of notes
+        [...expectedNotes].every(note => activeNotes.has(note)); // All expected notes are played
       
-      // Handle correct notes
-      if (correctHits > 0) {
+      // Any wrong notes or incomplete playing
+      const wrongNotes = 
+        expectedNotes.size > 0 && 
+        (activeNotes.size !== expectedNotes.size || 
+         [...activeNotes].some(note => !expectedNotes.has(note)));
+      
+      // Handle perfect chord match
+      if (allExpectedNotesPlayed) {
         // Calculate points with current multiplier
-        const pointsGained = Math.round(POINTS_BASE * correctHits * multiplierRef.current);
+        const pointsGained = Math.round(POINTS_BASE * multiplierRef.current);
         
         // Update streak
-        const newStreak = streakRef.current + correctHits;
+        const newStreak = streakRef.current + 1; // Increment by 1 for each correct chord
         setStreak(newStreak);
         
         // Update max streak if needed
@@ -137,7 +136,7 @@ export default function ScoreSystem({
         
         // Increase multiplier
         const newMultiplier = Math.min(
-          multiplierRef.current + (POINTS_MULTIPLIER_INCREMENT * correctHits),
+          multiplierRef.current + POINTS_MULTIPLIER_INCREMENT,
           MAX_MULTIPLIER
         );
         setMultiplier(newMultiplier);
@@ -152,8 +151,8 @@ export default function ScoreSystem({
         checkStreakThresholds(newStreak);
       }
       
-      // Handle wrong notes
-      if (wrongHits > 0) {
+      // Handle wrong notes or incomplete chords
+      if (wrongNotes) {
         // Play wrong note sound
         if (soundsLoadedRef.current) {
           playSound('wrongNote');
@@ -163,6 +162,12 @@ export default function ScoreSystem({
         setStreak(0);
         setMultiplier(1.0);
         setRating('');
+        
+        // Clear vibration timeout
+        if (vibrationTimeoutRef.current) {
+          clearTimeout(vibrationTimeoutRef.current);
+          vibrationTimeoutRef.current = null;
+        }
         
         // Turn off effects
         setShowFireEffect(false);
@@ -217,12 +222,34 @@ export default function ScoreSystem({
     
     // Vibration effect threshold
     if (newStreak >= VIBRATION_THRESHOLD) {
+      // Clear any existing timeout
+      if (vibrationTimeoutRef.current) {
+        clearTimeout(vibrationTimeoutRef.current);
+      }
+      
+      // Set vibration intensity
       const intensity = Math.min(Math.floor(newStreak / VIBRATION_THRESHOLD) * 0.2, 1);
       setVibrationLevel(intensity);
+      
+      // Set timeout to turn off vibration after 1500ms
+      vibrationTimeoutRef.current = setTimeout(() => {
+        setVibrationLevel(0);
+        if (onVibrateChange) onVibrateChange(0);
+        vibrationTimeoutRef.current = null;
+      }, 1500); // 1.5 seconds of vibration
     } else {
       setVibrationLevel(0);
     }
   };
+  
+  // Clean up timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (vibrationTimeoutRef.current) {
+        clearTimeout(vibrationTimeoutRef.current);
+      }
+    };
+  }, []);
   
   // Update player rating based on streak
   const updateRating = (currentStreak) => {

@@ -118,8 +118,9 @@ const ChordCarousel = ({ chords, currentTime }) => {
               {formatTime(chord.start)}
               {chord.start_bar && <span className={styles.barBeat}> ({formatBarBeat(chord.start_bar, chord.start_beat)})</span>}
             </div>
-            <div className={styles.chordName}>{getChordName(chord)} 
-            {chord.bass}
+            <div className={styles.chordName}>
+              {getChordName(chord)}
+              {chord.bass && `/${chord.bass}`}
             </div>
             
           </div>
