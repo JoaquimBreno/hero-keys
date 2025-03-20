@@ -9,6 +9,7 @@ const VIBRATION_THRESHOLD = 5; // When to start vibrating the piano
 const POINTS_BASE = 100; // Base points for a correct chord/set of simultaneous notes
 const POINTS_MULTIPLIER_INCREMENT = 0.1; // How much multiplier increases per correct chord
 const MAX_MULTIPLIER = 5.0; // Maximum score multiplier
+const SCORE_MILESTONE = 1000; // Score milestone for fire effect
 
 export default function ScoreSystem({ 
   midiData, 
@@ -25,6 +26,7 @@ export default function ScoreSystem({
   const [rating, setRating] = useState('');
   const [showFireEffect, setShowFireEffect] = useState(false);
   const [vibrationLevel, setVibrationLevel] = useState(0);
+  const [lastScoreMilestone, setLastScoreMilestone] = useState(0); // Track last milestone
   const vibrationTimeoutRef = useRef(null);
   
   // Refs to track state without rerenders
@@ -114,7 +116,26 @@ export default function ScoreSystem({
         setMultiplier(newMultiplier);
         
         // Update score
-        setScore(scoreRef.current + pointsGained);
+        const newScore = scoreRef.current + pointsGained;
+        setScore(newScore);
+        
+        // Check if we've crossed a 1000 point milestone
+        const currentMilestone = Math.floor(newScore / SCORE_MILESTONE);
+        const previousMilestone = Math.floor(scoreRef.current / SCORE_MILESTONE);
+        
+        if (currentMilestone > previousMilestone) {
+          // Trigger fire effect for 1 second
+          setShowFireEffect(true);
+          setTimeout(() => setShowFireEffect(false), 1000); // 1 second duration
+          
+          if (onFireEffect) {
+            onFireEffect(true);
+            setTimeout(() => onFireEffect(false), 1000);
+          }
+          
+          // Update last milestone
+          setLastScoreMilestone(currentMilestone * SCORE_MILESTONE);
+        }
         
         // Update rating
         updateRating(newStreak);
