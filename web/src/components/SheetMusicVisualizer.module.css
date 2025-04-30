@@ -1,0 +1,195 @@
+.sheetMusicContainer {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+  background: rgba(20, 20, 24, 0.8);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+}
+
+.sheetMusicHeader {
+  padding: 8px;
+  text-align: center;
+  font-weight: 600;
+  color: #00d9e8;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 14px;
+  user-select: none;
+}
+
+.sheetMusicContent {
+  flex: 1;
+  width: 100%;
+  background: transparent;
+  overflow-x: auto;
+  overflow-y: hidden;
+  white-space: nowrap;
+  color: white;
+  scroll-behavior: smooth;
+  will-change: scroll-position;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: #00d9e8 rgba(255, 255, 255, 0.1);
+}
+
+.sheetMusicContent::-webkit-scrollbar {
+  height: 8px;
+}
+
+.sheetMusicContent::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+.sheetMusicContent::-webkit-scrollbar-thumb {
+  background-color: #00d9e8;
+  border-radius: 4px;
+}
+
+.sheetMusicCanvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.staffContainer {
+  min-width: 100%;
+  height: 100%;
+  padding: 10px 0;
+  position: relative;
+}
+
+.staffSvg {
+  width: 100%;
+  min-width: 1000px;
+  min-height: 300px;
+  display: block;
+}
+
+/* Active note styling with glow effect */
+.activeNote {
+  filter: drop-shadow(0 0 5px #ff5252);
+}
+
+/* Treble and bass clef areas */
+.trebleStaff, .bassStaff {
+  stroke: #888;
+  stroke-width: 1;
+}
+
+/* Note styling */
+.note {
+  fill: #00d9e8;
+  stroke: none;
+}
+
+.note.active {
+  fill: #ff5252;
+  filter: drop-shadow(0 0 5px #ff5252);
+}
+
+/* Piano split marker */
+.middleCMarker {
+  stroke: rgba(255, 255, 255, 0.5);
+  stroke-width: 0.5;
+  stroke-dasharray: 5, 5;
+}
+
+/* Measure line styling */
+.measureLine {
+  stroke: #888;
+  stroke-width: 1;
+}
+
+.measureLine.strong {
+  stroke: #aaa;
+  stroke-width: 2;
+}
+
+/* Beat line styling */
+.beatLine {
+  stroke: #555;
+  stroke-width: 0.5;
+  stroke-dasharray: 3, 3;
+}
+
+/* Override ABC.js styles for better dark theme appearance */
+.sheetMusicContent :global(.abcjs-staff) {
+  fill: transparent;
+}
+
+.sheetMusicContent :global(.abcjs-staff-line) {
+  stroke: #888;
+}
+
+.sheetMusicContent :global(.abcjs-note) {
+  fill: #00d9e8;
+  stroke: none;
+}
+
+.sheetMusicContent :global(.abcjs-note.abcjs-highlight) {
+  fill: #ff5252;
+}
+
+.sheetMusicContent :global(.abcjs-stem) {
+  stroke: #00d9e8;
+  stroke-width: 1.5px;
+}
+
+.sheetMusicContent :global(.abcjs-stem.abcjs-highlight) {
+  stroke: #ff5252;
+  stroke-width: 2px;
+}
+
+.sheetMusicContent :global(.abcjs-rest) {
+  fill: #00d9e8;
+}
+
+.sheetMusicContent :global(.abcjs-annotation) {
+  fill: white;
+}
+
+.sheetMusicContent :global(.abcjs-cursor) {
+  stroke: #ff5252;
+  stroke-width: 2px;
+  stroke-dasharray: 5,5;
+}
+
+/* Styles for staff labels */
+.sheetMusicContent :global(.abcjs-staff-extra) {
+  fill: white;
+}
+
+.sheetMusicContent :global(.abcjs-text) {
+  fill: white;
+  font-size: 12px;
+}
+
+/* Add styles for the hand labels */
+.sheetMusicContent :global(.abcjs-chord) {
+  fill: #00d9e8;
+  font-weight: bold;
+}
+
+/* Fix positioning for horizontal layout */
+.sheetMusicContent :global(svg) {
+  display: inline-block;
+  min-width: 100%;
+  height: auto !important;
+  min-height: 200px;
+}
+
+/* Current position indicator */
+.sheetMusicContent :global(.abcjs-cursor) {
+  stroke-width: 2px;
+}
+
+/* Improve note heads */
+.sheetMusicContent :global(.abcjs-note-head) {
+  stroke: none;
+}

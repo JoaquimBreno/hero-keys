@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Moises Piano Visualizer</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    
+    :root {
+      --primary-color: #0084ff;
+      --primary-glow: rgba(0, 132, 255, 0.5);
+      --bg-color: #000;
+      --card-bg: #121212;
+      --text-primary: #fff;
+      --text-secondary: rgba(255, 255, 255, 0.7);
+      --text-tertiary: rgba(255, 255, 255, 0.4);
+      --border-radius: 12px;
+    }
+    
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-primary);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+      cursor: none; /* Hide default cursor */
+      overflow-x: hidden;
+    }
+    
+    .container {
+      width: 100%;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+    
+    .logo {
+      font-size: 2.5rem;
+      margin-bottom: 16px;
+      color: var(--primary-color);
+      text-shadow: 0 0 15px var(--primary-glow);
+      font-weight: 700;
+      letter-spacing: -1px;
+    }
+    
+    p {
+      color: var(--text-secondary);
+      max-width: 600px;
+      margin: 0 auto;
+      line-height: 1.6;
+      font-size: 1.1rem;
+    }
+    
+    .piano-container {
+      width: 100%;
+      height: 400px;
+      margin-bottom: 30px;
+      border-radius: var(--border-radius);
+      overflow: hidden;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+      background-color: var(--card-bg);
+      position: relative;
+      transition: all 0.3s ease;
+    }
+    
+    .piano-container:hover {
+      box-shadow: 0 25px 50px rgba(0, 0, 0, 0.7), 0 0 30px var(--primary-glow);
+    }
+    
+    .drop-zone {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      border: 2px dashed rgba(255, 255, 255, 0.2);
+      border-radius: var(--border-radius);
+      transition: all 0.3s ease;
+      padding: 20px;
+      text-align: center;
+    }
+    
+    .drop-zone.active {
+      border-color: var(--primary-color);
+      background-color: rgba(0, 132, 255, 0.05);
+    }
+    
+    .drop-zone-icon {
+      font-size: 3rem;
+      margin-bottom: 20px;
+      color: var(--primary-color);
+    }
+    
+    .drop-zone-text {
+      font-size: 1.2rem;
+      margin-bottom: 10px;
+      font-weight: 500;
+    }
+    
+    .drop-zone-subtext {
+      font-size: 0.9rem;
+      color: var(--text-tertiary);
+      margin-bottom: 20px;
+    }
+    
+    .file-input {
+      display: none;
+    }
+    
+    .browse-button {
+      padding: 12px 24px;
+      background-color: rgba(0, 132, 255, 0.1);
+      color: var(--primary-color);
+      border: 1px solid var(--primary-color);
+      border-radius: 50px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      backdrop-filter: blur(5px);
+    }
+    
+    .browse-button:hover {
+      background-color: rgba(0, 132, 255, 0.2);
+      transform: translateY(-2px);
+    }
+    
+    .controls-container {
+      width: 100%;
+      padding: 20px;
+      background-color: rgba(18, 18, 18, 0.7);
+      border-radius: var(--border-radius);
+      backdrop-filter: blur(10px);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    }
+    
+    footer {
+      margin-top: 60px;
+      text-align: center;
+      font-size: 0.9rem;
+      color: var(--text-tertiary);
+      padding: 20px 0;
+    }
+    
+    /* Custom cursor */
+    .cursor {
+      position: fixed;
+      width: 30px;
+      height: 30px;
+      border: 1.5px solid rgba(255, 255, 255, 0.5);
+      border-radius: 50%;
+      pointer-events: none;
+      transform: translate(-50%, -50%);
+      z-index: 9999;
+      transition: width 0.2s, height 0.2s;
+    }
+    
+    /* Glow effect following cursor */
+    .glow-effect {
+      position: fixed;
+      width: 300px;
+      height: 300px;
+      background: radial-gradient(circle, rgba(0, 132, 255, 0.1) 0%, rgba(0, 0, 0, 0) 70%);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: -1;
+      transform: translate(-50%, -50%);
+      opacity: 0.8;
+    }
+    
+    /* Responsive styles */
+    @media (max-width: 768px) {
+      .logo {
+        font-size: 2rem;
+      }
+      
+      p {
+        font-size: 1rem;
+      }
+      
+      .piano-container {
+        height: 300px;
+      }
+      
+      .cursor, .glow-effect {
+        display: none; /* Disable custom cursor on mobile */
+      }
+      
+      body {
+        cursor: auto; /* Restore default cursor on mobile */
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="cursor" id="cursor"></div>
+  <div class="glow-effect" id="glow"></div>
+  
+  <div class="container">
+    <header>
+      <div class="logo">Moises Piano Visualizer</div>
+      <p>Visualize suas músicas MIDI com animações elegantes em estilo neon</p>
+    </header>
+    
+    <div class="piano-container" id="piano-container">
+      <div class="drop-zone" id="drop-zone">
+        <div class="drop-zone-icon">
+          <svg width="64" height="64" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM12 20C7.59 20 4 16.41 4 12C4 7.59 7.59 4 12 4C16.41 4 20 7.59 20 12C20 16.41 16.41 20 12 20ZM16 11H13V8C13 7.45 12.55 7 12 7C11.45 7 11 7.45 11 8V11H8C7.45 11 7 11.45 7 12C7 12.55 7.45 13 8 13H11V16C11 16.55 11.45 17 12 17C12.55 17 13 16.55 13 16V13H16C16.55 13 17 12.55 17 12C17 11.45 16.55 11 16 11Z" fill="#0084ff"/>
+          </svg>
+        </div>
+        <h3 class="drop-zone-text">Arraste e solte seu arquivo MIDI aqui</h3>
+        <p class="drop-zone-subtext">ou</p>
+        <label class="browse-button" for="file-input">Escolher arquivo</label>
+        <input type="file" id="file-input" class="file-input" accept=".mid,.midi">
+      </div>
+    </div>
+    
+    <div class="controls-container" id="controls-container"></div>
+    
+    <footer>
+      <p>© 2025 Moises Inc. Todos os direitos reservados</p>
+    </footer>
+  </div>
+  
+  <script src="https://cdn.jsdelivr.net/npm/midi-parser-js/midi-parser.min.js"></script>
+  <script src="herokeys.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,242 @@
+.audioPlayer {
+  width: 100%;
+  padding: 10px;
+  border-radius: 8px;
+  background-color: #121212;
+  color: #fff;
+}
+
+.playerInfo {
+  margin-bottom: 12px;
+}
+
+.fileName {
+  font-size: 14px;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.playerControls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.playButton, .controlButton, .toggleButton {
+  width: 30px;
+  height: 30px;
+  background-color: #333;
+  border-radius: 4px;
+  color: white;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.playButton:hover, .controlButton:hover, .toggleButton:hover {
+  background-color: #444;
+}
+
+.pauseButton {
+  font-size: 12px;
+}
+
+.activeMute, .midiSoundDisabled {
+  background-color: #e74c3c;
+}
+
+.activeMute:hover, .midiSoundDisabled:hover {
+  background-color: #c0392b;
+}
+
+.timeInfo {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  position: relative;
+}
+
+.currentTime, .duration {
+  font-size: 12px;
+  color: #fefefe;
+  font-weight: 500;
+  min-width: 35px;
+}
+
+/* Container for the custom seek bar */
+.seekBarContainer {
+  flex: 1;
+  position: relative;
+  height: 4px;
+  background-color: #333;
+  border-radius: 2px;
+  cursor: pointer;
+}
+
+/* Progress bar with gradient */
+.seekBarProgress {
+  position: absolute;
+  height: 100%;
+  background-image: linear-gradient(90deg, #00dae8, #0affa7);
+  border-radius: 2px;
+  pointer-events: none;
+}
+
+/* Thumb of the seek bar */
+.seekBarThumb {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  background-color: #00e5c7;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+/* Hide the default range input but keep it functional */
+.seekBar {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  z-index: 2;
+  margin: 0;
+  padding: 0;
+}
+
+.toggleButton {
+  background: #333;
+}
+
+.sheetMusicActive {
+  background: #00e5c7;
+}
+
+.sheetMusicActive:hover {
+  background: #00c6b5;
+}
+
+.tablatureActive {
+  background: #e67e22;
+}
+
+.tablatureActive:hover {
+  background: #d35400;
+}
+
+/* Add this to your existing CSS */
+.rateButton {
+  font-weight: bold;
+  min-width: 50px;
+  background-color: #282828;
+  border: 1px solid #444;
+  border-radius: 4px;
+  color: #00d9e8;
+  transition: all 0.2s ease;
+}
+
+.rateButton:hover {
+  background-color: #333;
+  color: #fff;
+}
+
+.rateButton:active {
+  transform: scale(0.95);
+}
+
+/* Add these styles to existing CSS */
+
+.controlButton svg,
+.playButton svg,
+.toggleButton svg {
+  width: 20px;
+  height: 20px;
+  fill: currentColor;
+  stroke: currentColor;
+}
+
+.controlButton,
+.playButton,
+.toggleButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Ensure proper color inheritance */
+.activeMute svg,
+.midiSoundDisabled svg,
+.chordsActive svg,
+.sheetMusicActive svg {
+  color: inherit;
+}
+
+/* Add these styles to your existing CSS file */
+
+.volumeControl {
+  position: relative;
+  display: inline-block;
+}
+
+.volumePopup {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #333;
+  border-radius: 8px;
+  padding: 8px;
+  margin-bottom: 8px;
+  z-index: 100;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+  min-width: 120px;
+}
+
+.volumePopup::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 8px;
+  border-style: solid;
+  border-color: #333 transparent transparent transparent;
+}
+
+.volumeSlider {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.volumeButton {
+  background-color: #444;
+  border: none;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  text-align: center;
+  width: 100%;
+}
+
+.volumeButton:hover {
+  background-color: #555;
+}
+
+.activeVolume {
+  background-color: #007bff;
+}
+
+.activeVolume:hover {
+  background-color: #0069d9;
+}

@@ -1,0 +1,45 @@
+.cursor {
+    position: fixed;
+    width: 30px;
+    height: 30px;
+    border: 1.5px solid var(--text-secondary);
+    border-radius: 50%;
+    pointer-events: none;
+    transform: translate(-50%, -50%);
+    z-index: 9999;
+    transition: width 0.2s, height 0.2s, border-color 0.2s;
+    mix-blend-mode: difference;
+  }
+  
+  .cursor.active {
+    border-width: 2px;
+    transform: translate(-50%, -50%) scale(1.1);
+  }
+  
+  .glowEffect {
+    position: fixed;
+    width: 2500px;
+    height: 2500px;
+    background: radial-gradient(circle, rgba(0, 132, 255, 0.1) 0%, rgba(0, 0, 0, 0) 70%);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: -1;
+    transform: translate(-50%, -50%);
+    opacity: 0.8;
+  }
+  
+  @media (prefers-color-scheme: dark) {
+    .cursor {
+      border-color: rgba(255, 255, 255, 0.5);
+    }
+    
+    .glowEffect {
+      background: radial-gradient(circle, rgba(0, 132, 255, 0.15) 0%, rgba(0, 0, 0, 0) 70%);
+    }
+  }
+  
+  @media (max-width: 768px) {
+    .cursor, .glowEffect {
+      display: none; /* Disable custom cursor on mobile */
+    }
+  }

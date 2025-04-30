@@ -1,0 +1,125 @@
+.chordCarouselContainer {
+  position: relative;
+  width: 100%;
+  height: 80px;
+  background-color: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  overflow: hidden;
+  margin: 10px 0;
+}
+
+.carouselTrack {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  padding: 0 50%;
+  overflow-x: auto;
+  scrollbar-width: none; /* Hide scrollbar for Firefox */
+  -ms-overflow-style: none; /* Hide scrollbar for IE and Edge */
+}
+
+.carouselTrack::-webkit-scrollbar {
+  display: none; /* Hide scrollbar for Chrome and Safari */
+}
+
+.chordItem {
+  flex: 0 0 auto;
+  min-width: 120px;
+  height: 60px;
+  margin: 0 10px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  border-radius: 8px;
+  background-color: rgba(30, 30, 30, 0.7);
+  transition: all 0.3s ease;
+  transform: scale(0.85);
+  opacity: 0.7;
+}
+
+.activeChord {
+  background-image: linear-gradient(90deg, #00dae8, #0affa7);
+  transform: scale(1);
+  opacity: 1;
+  box-shadow: 0 0 15px rgba(60, 120, 255, 0.4);
+  animation: pulseHighlight 2s infinite;
+}
+
+/* Add these new style rules for text in active chords */
+.activeChord .chordName,
+.activeChord .chordTime,
+.activeChord .chordBass,
+.activeChord .barBeat {
+  color: #000; /* Black text for better contrast */
+  text-shadow: 0 0 2px rgba(255, 255, 255, 0.3); /* Subtle text shadow for legibility */
+}
+
+.chordName {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: white;
+}
+
+.chordTime {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 4px;
+}
+
+.barBeat {
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.5);
+  margin-left: 3px;
+}
+
+.chordBass {
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.9);
+  margin-top: 2px;
+}
+
+.noChords {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 80px;
+  color: rgba(255, 255, 255, 0.5);
+  font-style: italic;
+}
+
+.centerMarker {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  height: 100%;
+  width: 2px;
+  background-color: rgba(255, 255, 255, 0.3);
+  z-index: 10;
+}
+
+.formatToggle {
+  position: absolute;
+  bottom: 0px;
+  left: 5px;
+  background: rgba(40, 40, 40, 0.7);
+  color: rgba(255, 255, 255, 0.8);
+  border: none;
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 0.7rem;
+  cursor: pointer;
+  z-index: 20;
+  text-transform: capitalize;
+}
+
+.formatToggle:hover {
+  background: rgba(60, 60, 60, 0.9);
+}
+
+/* Animation for chord transitions */
+@keyframes pulseHighlight {
+  0% { box-shadow: 0 0 5px rgba(60, 120, 255, 0.2); }
+  50% { box-shadow: 0 0 20px rgba(60, 120, 255, 0.6); }
+  100% { box-shadow: 0 0 5px rgba(60, 120, 255, 0.2); }
+}

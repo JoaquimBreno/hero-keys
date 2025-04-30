@@ -1,0 +1,317 @@
+.loadedFile {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+  }
+  
+  .loadedFile h3 {
+    margin-bottom: 15px;
+    font-size: 1.1rem;
+    color: var(--text-secondary);
+  }
+  
+  .pianoVisualization {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+    overflow: hidden;
+    position: relative;
+  }
+  
+  .loadingText {
+    color: var(--text-tertiary);
+    font-size: 0.9rem;
+  }
+  
+  .resetButton {
+    padding: 10px 20px;
+    background-color: transparent;
+    color: var(--primary-color);
+    border: 1px solid var(--primary-color);
+    border-radius: 50px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  
+  .resetButton:hover {
+    background-color: rgba(0, 132, 255, 0.1);
+    transform: translateY(-2px);
+  }
+  
+  
+  @media (prefers-color-scheme: dark) {
+    .pianoVisualization {
+      background-color: rgba(0, 0, 0, 0.4);
+    }
+  }
+
+
+.midiInfoContainer {
+  width: 100%;
+  height: 100%;
+  padding: 20px;
+  overflow: auto;
+  color: var(--text-primary);
+}
+
+.midiInfoTitle {
+  margin-bottom: 15px;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.midiInfoItem {
+  margin-bottom: 8px;
+  line-height: 1.5;
+}
+
+.tracksContainer {
+  margin-top: 20px;
+}
+
+.tracksTitle {
+  margin-bottom: 10px;
+  font-size: 1.1rem;
+  font-weight: 500;
+}
+
+.tracksList {
+  list-style-type: none;
+  padding: 0;
+}
+
+.trackItem {
+  margin-bottom: 5px;
+  padding: 8px;
+  background-color: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+
+.trackItem:hover {
+  background-color: rgba(0, 0, 0, 0.3);
+}
+
+.zoomInAnimation {
+  animation: zoomIn 0.5s ease-out forwards;
+}
+
+@keyframes zoomIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.85) translateY(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  .trackItem {
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+  
+  .trackItem:hover {
+    background-color: rgba(255, 255, 255, 0.15);
+  }
+}
+
+.loadingContainer {
+  display: flex;
+  border: 2px dashed white;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  width: 100%;
+  padding: 2rem;
+}
+
+.spinner {
+  border: 4px solid rgba(0, 0, 0, 0.1);
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  border-left-color: var(--primary-color);
+  animation: spin 1s linear infinite;
+  margin-bottom: 1.5rem;
+}
+
+.smallText {
+  font-size: 0.9rem;
+  color: var(--text-tertiary);
+  margin-top: 0.5rem;
+}
+
+.visualizationContainer {
+  flex: 1;
+  display: flex;
+  width: 100%;
+  position: relative;
+}
+
+.chordsSidebar {
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 250px;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.3);
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 1rem;
+  overflow-y: auto;
+  z-index: 10;
+}
+
+.chordsTitle {
+  font-size: 1.1rem;
+  margin-bottom: 1rem;
+  color: var(--text-secondary);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  padding-bottom: 0.5rem;
+}
+
+.chordsList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.chordItem {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.5rem;
+  background-color: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+}
+
+.chordName {
+  font-weight: bold;
+}
+
+.chordTime {
+  font-size: 0.85rem;
+  color: var(--text-tertiary);
+}
+
+.noChords {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-tertiary);
+  font-style: italic;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.loadingContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  padding: 20px;
+}
+
+.fancySpinner {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  margin-bottom: 30px;
+  animation: spin 1.5s linear infinite;
+}
+
+.innerCircle {
+  position: absolute;
+  top: 25%;
+  left: 25%;
+  width: 50%;
+  height: 50%;
+  border-radius: 50%;
+  border: 4px solid transparent;
+  border-top-color: var(--primary-color, #0084ff);
+  animation: spin-reverse 1s linear infinite;
+}
+
+.outerCircle {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 4px solid transparent;
+  border-top-color: var(--primary-color, #0084ff);
+  border-bottom-color: var(--primary-color, #0084ff);
+  animation: spin 2s linear infinite;
+}
+
+.dot {
+  position: absolute;
+  top: calc(50% - 6px);
+  left: calc(100% - 6px);
+  width: 12px;
+  height: 12px;
+  background-color: var(--primary-color, #0084ff);
+  border-radius: 50%;
+  box-shadow: 0 0 10px var(--primary-color, #0084ff);
+}
+
+.loadingText {
+  margin: 10px 0;
+  font-size: 1.1rem;
+  color: var(--text-primary, #ffffff);
+  font-weight: 500;
+}
+
+.smallText {
+  font-size: 0.85rem;
+  color: var(--text-tertiary, #aaaaaa);
+  opacity: 0.7;
+}
+
+@keyframes spin-reverse {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(-360deg);
+  }
+}
+
+/* Add these to your existing CSS file */
+
+.enhancedLoader {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  margin-bottom: 20px;
+}
+
+.loaderCircle {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: 4px solid transparent;
+  border-top: 4px solid var(--primary-color);
+  border-radius: 50%;
+  animation: spin 1.5s linear infinite;
+}

@@ -1,0 +1,191 @@
+@import "tailwindcss";
+
+:root {
+  /* Base colors */
+  --background: #ffffff;
+  --foreground: #171717;
+  
+  /* Moises Piano Visualizer colors */
+  --primary-color: #0084ff;
+  --primary-glow: rgba(0, 132, 255, 0.5);
+  --bg-color: var(--background);
+  --card-bg: #f5f5f5;
+  --text-primary: var(--foreground);
+  --text-secondary: rgba(23, 23, 23, 0.7);
+  --text-tertiary: rgba(23, 23, 23, 0.4);
+  --border-radius: 12px;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+    
+    /* Dark mode adjustments for Moises Piano Visualizer */
+    --bg-color: var(--background);
+    --card-bg: #121212;
+    --text-primary: var(--foreground);
+    --text-secondary: rgba(237, 237, 237, 0.7);
+    --text-tertiary: rgba(237, 237, 237, 0.4);
+  }
+}
+
+body {
+  background: var(--bg-color);
+  color: var(--text-primary);
+  font-family: var(--font-sans, Arial, Helvetica, sans-serif);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 100vh;
+  padding: 20px;
+  overflow-x: hidden;
+}
+
+.container {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+header {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.logo {
+  font-size: 2.5rem;
+  margin-bottom: 16px;
+  color: var(--foreground);
+  text-shadow: 0 0 15px var(--primary-glow);
+  font-weight: 700;
+  letter-spacing: -1px;
+}
+
+p {
+  color: var(--text-secondary);
+  max-width: 600px;
+  margin: 0 auto;
+  line-height: 1.6;
+  font-size: 1.1rem;
+}
+
+.piano-container {
+  width: 50%;
+  height: 400px;
+  margin-bottom: 30px;
+  border-radius: var(--border-radius);
+  overflow: hidden;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+  background-color: var(--card-bg);
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.piano-container:hover {
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.2), 0 0 30px var(--primary-glow);
+}
+
+.drop-zone {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 2px dashed rgba(0, 0, 0, 0.1);
+  border-radius: var(--border-radius);
+  transition: all 0.3s ease;
+  padding: 20px;
+  text-align: center;
+}
+
+@media (prefers-color-scheme: dark) {
+  .drop-zone {
+    border: 2px dashed rgba(255, 255, 255, 0.2);
+  }
+}
+
+.drop-zone.active {
+  border-color: var(--primary-color);
+  background-color: rgba(0, 132, 255, 0.05);
+}
+
+.drop-zone-icon {
+  font-size: 3rem;
+  margin-bottom: 20px;
+  color: var(--primary-color);
+}
+
+.drop-zone-text {
+  font-size: 1.2rem;
+  margin-bottom: 10px;
+  font-weight: 500;
+}
+
+.drop-zone-subtext {
+  font-size: 0.9rem;
+  color: var(--text-tertiary);
+  margin-bottom: 20px;
+}
+
+.file-input {
+  display: none;
+}
+
+.browse-button {
+  padding: 12px 24px;
+  background-color: rgba(0, 132, 255, 0.1);
+  color: var(--primary-color);
+  border: 1px solid var(--primary-color);
+  border-radius: 50px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(5px);
+}
+
+.browse-button:hover {
+  background-color: rgba(0, 132, 255, 0.2);
+  transform: translateY(-2px);
+}
+
+.controls-container {
+  width: 100%;
+  padding: 20px;
+  background-color: rgba(18, 18, 18, 0.7);
+  border-radius: var(--border-radius);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+footer {
+  margin-top: 60px;
+  text-align: center;
+  font-size: 0.9rem;
+  color: var(--text-tertiary);
+  padding: 20px 0;
+}
+
+/* Responsive styles */
+@media (max-width: 768px) {
+  .logo {
+    font-size: 2rem;
+  }
+  
+  p {
+    font-size: 1rem;
+  }
+  
+  .piano-container {
+    height: 300px;
+  }
+}
