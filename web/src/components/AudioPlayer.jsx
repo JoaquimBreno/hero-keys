@@ -23,6 +23,12 @@ const AudioPlayer = forwardRef(({
   const seekingRef = useRef(false);
   const animationFrameRef = useRef(null);
   const seekBarContainerRef = useRef(null);
+  const onTimeUpdateRef = useRef(onTimeUpdate);
+
+  // Update the ref when onTimeUpdate changes
+  useEffect(() => {
+    onTimeUpdateRef.current = onTimeUpdate;
+  }, [onTimeUpdate]);
   
   // Expose seekToTime function to parent components
   useImperativeHandle(ref, () => ({
@@ -102,8 +108,8 @@ const AudioPlayer = forwardRef(({
         
         // Always report current time to parent for synchronization
         // even for small changes to ensure precise note visualization
-        if (onTimeUpdate && (Math.abs(time - previousTime) > 0.01 || time !== previousTime)) {
-          onTimeUpdate(time * 1000); // Convert to milliseconds for MIDI sync
+        if (onTimeUpdateRef.current && (Math.abs(time - previousTime) > 0.01 || time !== previousTime)) {
+          onTimeUpdateRef.current(time * 1000); // Convert to milliseconds for MIDI sync
         }
       }
       animationFrameRef.current = requestAnimationFrame(updateTime);
@@ -116,7 +122,7 @@ const AudioPlayer = forwardRef(({
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [isPlaying, onTimeUpdate]);
+  }, [isPlaying]); // Removed onTimeUpdate from dependencies
   
   // Handle play/pause
   const togglePlay = () => {

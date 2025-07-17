@@ -4,10 +4,6 @@ import styles from './SheetMusicVisualizer.module.css';
 // Constants for musical notation
 const TREBLE_CLEF = '𝄞';
 const BASS_CLEF = '𝄢';
-const WHOLE_NOTE = '𝅝';
-const HALF_NOTE = '𝅗𝅥';
-const QUARTER_NOTE = '𝅘𝅥';
-const EIGHTH_NOTE = '𝅘𝅥𝅮';
 const SHARP = '♯';
 const FLAT = '♭';
 const NATURAL = '♮';
@@ -19,6 +15,144 @@ const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 
 const MIDI_MIN = 36; // C2
 const MIDI_MAX = 96; // C7
 const MIDDLE_C = 60;  // MIDI note number for middle C (C4)
+
+// Custom SVG Note Components
+const WholeNote = ({ x, y, isActive }) => (
+  <g>
+    <ellipse
+      cx={x}
+      cy={y}
+      rx="9"
+      ry="6"
+      fill="none"
+      stroke={isActive ? "#ff5252" : "#00d9e8"}
+      strokeWidth="2.5"
+      transform={`rotate(-18 ${x} ${y})`}
+    />
+    {/* Inner shadow effect */}
+    <ellipse
+      cx={x}
+      cy={y}
+      rx="6"
+      ry="4"
+      fill="none"
+      stroke={isActive ? "rgba(255, 82, 82, 0.3)" : "rgba(0, 217, 232, 0.3)"}
+      strokeWidth="1"
+      transform={`rotate(-18 ${x} ${y})`}
+    />
+  </g>
+);
+
+const HalfNote = ({ x, y, stemDirection, isActive }) => (
+  <g>
+    {/* Note head - hollow with better proportions */}
+    <ellipse
+      cx={x}
+      cy={y}
+      rx="8"
+      ry="5.5"
+      fill="none"
+      stroke={isActive ? "#ff5252" : "#00d9e8"}
+      strokeWidth="2.2"
+      transform={`rotate(-18 ${x} ${y})`}
+    />
+    {/* Stem with proper positioning */}
+    <line
+      x1={x + (stemDirection === 'up' ? 7.5 : -7.5)}
+      y1={y}
+      x2={x + (stemDirection === 'up' ? 7.5 : -7.5)}
+      y2={y + (stemDirection === 'up' ? -32 : 32)}
+      stroke={isActive ? "#ff5252" : "#00d9e8"}
+      strokeWidth="2.2"
+      strokeLinecap="round"
+    />
+  </g>
+);
+
+const QuarterNote = ({ x, y, stemDirection, isActive }) => (
+  <g>
+    {/* Note head - filled with better shape */}
+    <ellipse
+      cx={x}
+      cy={y}
+      rx="8"
+      ry="5.5"
+      fill={isActive ? "#ff5252" : "#00d9e8"}
+      stroke="none"
+      transform={`rotate(-18 ${x} ${y})`}
+    />
+    {/* Highlight effect on note head */}
+    <ellipse
+      cx={x - 2}
+      cy={y - 2}
+      rx="3"
+      ry="2"
+      fill={isActive ? "rgba(255, 255, 255, 0.4)" : "rgba(255, 255, 255, 0.2)"}
+      stroke="none"
+      transform={`rotate(-18 ${x - 2} ${y - 2})`}
+    />
+    {/* Stem with proper positioning */}
+    <line
+      x1={x + (stemDirection === 'up' ? 7.5 : -7.5)}
+      y1={y}
+      x2={x + (stemDirection === 'up' ? 7.5 : -7.5)}
+      y2={y + (stemDirection === 'up' ? -32 : 32)}
+      stroke={isActive ? "#ff5252" : "#00d9e8"}
+      strokeWidth="2.2"
+      strokeLinecap="round"
+    />
+  </g>
+);
+
+const EighthNote = ({ x, y, stemDirection, isActive }) => (
+  <g>
+    {/* Note head - filled */}
+    <ellipse
+      cx={x}
+      cy={y}
+      rx="8"
+      ry="5.5"
+      fill={isActive ? "#ff5252" : "#00d9e8"}
+      stroke="none"
+      transform={`rotate(-18 ${x} ${y})`}
+    />
+    {/* Highlight effect on note head */}
+    <ellipse
+      cx={x - 2}
+      cy={y - 2}
+      rx="3"
+      ry="2"
+      fill={isActive ? "rgba(255, 255, 255, 0.4)" : "rgba(255, 255, 255, 0.2)"}
+      stroke="none"
+      transform={`rotate(-18 ${x - 2} ${y - 2})`}
+    />
+    {/* Stem */}
+    <line
+      x1={x + (stemDirection === 'up' ? 7.5 : -7.5)}
+      y1={y}
+      x2={x + (stemDirection === 'up' ? 7.5 : -7.5)}
+      y2={y + (stemDirection === 'up' ? -32 : 32)}
+      stroke={isActive ? "#ff5252" : "#00d9e8"}
+      strokeWidth="2.2"
+      strokeLinecap="round"
+    />
+    {/* Improved flag with smooth curves */}
+    <path
+      d={stemDirection === 'up' 
+        ? `M ${x + 7.5} ${y - 32} 
+           Q ${x + 22} ${y - 28} ${x + 20} ${y - 18}
+           Q ${x + 18} ${y - 12} ${x + 7.5} ${y - 16}
+           Q ${x + 15} ${y - 20} ${x + 7.5} ${y - 25}`
+        : `M ${x - 7.5} ${y + 32} 
+           Q ${x - 22} ${y + 28} ${x - 20} ${y + 18}
+           Q ${x - 18} ${y + 12} ${x - 7.5} ${y + 16}
+           Q ${x - 15} ${y + 20} ${x - 7.5} ${y + 25}`
+      }
+      fill={isActive ? "#ff5252" : "#00d9e8"}
+      stroke="none"
+    />
+  </g>
+);
 
 export default function SheetMusicVisualizer({ midiData, currentTime }) {
   const containerRef = useRef(null);
@@ -141,10 +275,28 @@ export default function SheetMusicVisualizer({ midiData, currentTime }) {
   // Determine note duration symbol
   const getNoteDurationSymbol = (duration) => {
     // Duration is in milliseconds
-    if (duration >= 1500) return WHOLE_NOTE;
-    if (duration >= 750) return HALF_NOTE;
-    if (duration >= 375) return QUARTER_NOTE;
-    return EIGHTH_NOTE;
+    if (duration >= 1500) return 'WholeNote';
+    if (duration >= 750) return 'HalfNote';
+    if (duration >= 375) return 'QuarterNote';
+    return 'EighthNote';
+  };
+
+  // Get note component based on duration
+  const getNoteComponent = (duration, x, y, stemDirection, isActive) => {
+    const noteType = getNoteDurationSymbol(duration);
+    
+    switch (noteType) {
+      case 'WholeNote':
+        return <WholeNote key={`note-${x}-${y}`} x={x} y={y} isActive={isActive} />;
+      case 'HalfNote':
+        return <HalfNote key={`note-${x}-${y}`} x={x} y={y} stemDirection={stemDirection} isActive={isActive} />;
+      case 'QuarterNote':
+        return <QuarterNote key={`note-${x}-${y}`} x={x} y={y} stemDirection={stemDirection} isActive={isActive} />;
+      case 'EighthNote':
+        return <EighthNote key={`note-${x}-${y}`} x={x} y={y} stemDirection={stemDirection} isActive={isActive} />;
+      default:
+        return <QuarterNote key={`note-${x}-${y}`} x={x} y={y} stemDirection={stemDirection} isActive={isActive} />;
+    }
   };
   
   // Get accidental for a note
@@ -387,14 +539,12 @@ export default function SheetMusicVisualizer({ midiData, currentTime }) {
         const y = yBase + linePosition * staffLineSpacing / 2;
         
         // Note symbol based on duration
-        const noteSymbol = getNoteDurationSymbol(note.duration);
-        const accidental = getAccidental(note.name);
-        
-        // Calculate stem direction (up for lower staff position, down for higher)
         const stemDirection = linePosition > 0 ? 'up' : 'down';
+        const accidental = getAccidental(note.name);
         
         // Calculate horizontal offset for chord notes to avoid overlapping
         const offsetX = chordIndex === 0 ? 0 : noteIndex * 2;
+        const noteX = xPos + offsetX;
         
         // Determine if we need to draw ledger lines
         const needsLedgerLines = 
@@ -413,9 +563,9 @@ export default function SheetMusicVisualizer({ midiData, currentTime }) {
                 ledgerLines.push(
                   <line
                     key={`ledger-${chordIndex}-${noteIndex}-${i}`}
-                    x1={xPos - 10}
+                    x1={noteX - 10}
                     y1={yBase + i * staffLineSpacing / 2}
-                    x2={xPos + 10}
+                    x2={noteX + 10}
                     y2={yBase + i * staffLineSpacing / 2}
                     stroke="#888"
                     strokeWidth="1"
@@ -431,9 +581,9 @@ export default function SheetMusicVisualizer({ midiData, currentTime }) {
                 ledgerLines.push(
                   <line
                     key={`ledger-${chordIndex}-${noteIndex}-${i}`}
-                    x1={xPos - 10}
+                    x1={noteX - 10}
                     y1={yBase + i * staffLineSpacing / 2}
-                    x2={xPos + 10}
+                    x2={noteX + 10}
                     y2={yBase + i * staffLineSpacing / 2}
                     stroke="#888"
                     strokeWidth="1"
@@ -450,9 +600,9 @@ export default function SheetMusicVisualizer({ midiData, currentTime }) {
                 ledgerLines.push(
                   <line
                     key={`ledger-${chordIndex}-${noteIndex}-${i}`}
-                    x1={xPos - 10}
+                    x1={noteX - 10}
                     y1={yBase + i * staffLineSpacing / 2}
-                    x2={xPos + 10}
+                    x2={noteX + 10}
                     y2={yBase + i * staffLineSpacing / 2}
                     stroke="#888"
                     strokeWidth="1"
@@ -468,9 +618,9 @@ export default function SheetMusicVisualizer({ midiData, currentTime }) {
                 ledgerLines.push(
                   <line
                     key={`ledger-${chordIndex}-${noteIndex}-${i}`}
-                    x1={xPos - 10}
+                    x1={noteX - 10}
                     y1={yBase + i * staffLineSpacing / 2}
-                    x2={xPos + 10}
+                    x2={noteX + 10}
                     y2={yBase + i * staffLineSpacing / 2}
                     stroke="#888"
                     strokeWidth="1"
@@ -492,39 +642,19 @@ export default function SheetMusicVisualizer({ midiData, currentTime }) {
             {/* Render accidental if needed */}
             {accidental && (
               <text
-                x={xPos - 15}
-                y={y}
-                fontSize="24"
+                x={noteX - 15}
+                y={y + 5}
+                fontSize="20"
                 fill={isActive ? "#ff5252" : "#00d9e8"}
                 fontFamily="serif"
+                textAnchor="middle"
               >
                 {accidental}
               </text>
             )}
             
-            {/* Render note head */}
-            <text
-              x={xPos + offsetX}
-              y={y}
-              fontSize="24"
-              fill={isActive ? "#ff5252" : "#00d9e8"}
-              fontFamily="serif"
-              textAnchor="middle"
-            >
-              {noteSymbol}
-            </text>
-            
-            {/* Render note stem (for quarter and eighth notes) */}
-            {(noteSymbol === QUARTER_NOTE || noteSymbol === EIGHTH_NOTE) && (
-              <line
-                x1={xPos + offsetX + (stemDirection === 'up' ? -8 : 8)}
-                y1={y - (stemDirection === 'up' ? 0 : 10)}
-                x2={xPos + offsetX + (stemDirection === 'up' ? -8 : 8)}
-                y2={y + (stemDirection === 'up' ? -30 : 30)}
-                stroke={isActive ? "#ff5252" : "#00d9e8"}
-                strokeWidth="2"
-              />
-            )}
+            {/* Render note using custom SVG component */}
+            {getNoteComponent(note.duration, noteX, y, stemDirection, isActive)}
           </g>
         );
       });

@@ -73,24 +73,91 @@
 
 /* Active note styling with glow effect */
 .activeNote {
-  filter: drop-shadow(0 0 5px #ff5252);
+  filter: drop-shadow(0 0 8px #ff5252) drop-shadow(0 0 15px rgba(255, 82, 82, 0.4));
+  animation: noteGlow 0.3s ease-in-out;
 }
 
-/* Treble and bass clef areas */
-.trebleStaff, .bassStaff {
-  stroke: #888;
-  stroke-width: 1;
+/* Note hover effects */
+.staffSvg g:hover {
+  filter: drop-shadow(0 0 3px #00d9e8);
+  transition: filter 0.2s ease-in-out;
 }
 
-/* Note styling */
+/* Enhanced note styling */
 .note {
   fill: #00d9e8;
   stroke: none;
+  transition: all 0.2s ease-in-out;
+  cursor: pointer;
 }
 
 .note.active {
   fill: #ff5252;
-  filter: drop-shadow(0 0 5px #ff5252);
+  filter: drop-shadow(0 0 8px #ff5252) drop-shadow(0 0 15px rgba(255, 82, 82, 0.4));
+}
+
+/* Smooth transitions for all SVG elements */
+.staffSvg ellipse,
+.staffSvg line,
+.staffSvg path {
+  transition: all 0.2s ease-in-out;
+}
+
+/* Note head animations */
+@keyframes noteGlow {
+  0% {
+    filter: drop-shadow(0 0 5px #ff5252);
+    transform: scale(1);
+  }
+  50% {
+    filter: drop-shadow(0 0 12px #ff5252) drop-shadow(0 0 20px rgba(255, 82, 82, 0.6));
+    transform: scale(1.05);
+  }
+  100% {
+    filter: drop-shadow(0 0 8px #ff5252) drop-shadow(0 0 15px rgba(255, 82, 82, 0.4));
+    transform: scale(1);
+  }
+}
+
+/* Enhanced note appearance */
+.staffSvg ellipse {
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
+}
+
+/* Active note ellipse styling */
+.activeNote ellipse {
+  filter: drop-shadow(0 0 8px #ff5252) drop-shadow(0 1px 3px rgba(0, 0, 0, 0.5));
+}
+
+/* Enhanced stem appearance */
+.staffSvg line {
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.2));
+}
+
+/* Active note stem styling */
+.activeNote line {
+  filter: drop-shadow(0 0 4px #ff5252) drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4));
+}
+
+/* Enhanced flag appearance for eighth notes */
+.staffSvg path {
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
+}
+
+.activeNote path {
+  filter: drop-shadow(0 0 6px #ff5252) drop-shadow(0 1px 3px rgba(0, 0, 0, 0.5));
+}
+
+/* Improved accidental styling */
+.staffSvg text {
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.4));
+  font-weight: bold;
+}
+
+/* Performance optimizations */
+.staffSvg {
+  will-change: transform;
+  transform: translateZ(0);
 }
 
 /* Piano split marker */
