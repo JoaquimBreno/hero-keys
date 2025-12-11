@@ -1,5 +1,6 @@
 import os
 import base64
+from pathlib import Path
 from basic_pitch.inference import predict
 from basic_pitch import ICASSP_2022_MODEL_PATH
 
@@ -15,19 +16,19 @@ def run_inference(audio_path):
     """
     model_output, midi_data, note_events = predict(audio_path)
 
-    # create temp dir
-    if not os.path.exists('temp'):
-        os.makedirs('temp')
+    # create temp dir (relativo ao diretório atual)
+    temp_dir = Path('temp')
+    temp_dir.mkdir(exist_ok=True)
 
     # save midi
-    midi_path = os.path.join('temp', 'output.mid')
-    midi_data.write(midi_path)
+    midi_path = temp_dir / 'output.mid'
+    midi_data.write(str(midi_path))
     
     # Read the MIDI file and convert to base64
     with open(midi_path, "rb") as f:
         midi_base64 = base64.b64encode(f.read()).decode('utf-8')
     
     return {
-        "midi_path": midi_path,
+        "midi_path": str(midi_path),
         "midi_base64": midi_base64
     }

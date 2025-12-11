@@ -20,6 +20,8 @@ export default function StylishPiano({
   const [lastPlayedNote, setLastPlayedNote] = useState(null);
   const [processedMidiData, setProcessedMidiData] = useState(null);
   const [activeNoteInfo, setActiveNoteInfo] = useState(null); // Para mostrar o indicador de nota
+  const [keyboardOctave, setKeyboardOctave] = useState(3); // Oitava base para teclado (C3-C4)
+  const [pressedKeyboardKeys, setPressedKeyboardKeys] = useState(new Set()); // Teclas do teclado físico pressionadas
   
   // Refs for key elements
   const whiteKeysRef = useRef({});
@@ -29,6 +31,40 @@ export default function StylishPiano({
   // Piano configuration reference - now using constants from outside
   const startNote = START_NOTE;
   const keyCount = KEY_COUNT;
+  
+  // Mapeamento de teclas do teclado para notas MIDI (relativo à oitava)
+  // Layout padrão: A S D F G H J para teclas brancas (C D E F G A B)
+  // W E T Y U para teclas pretas (C# D# F# G# A#)
+  const keyboardToNote = {
+    // Teclas brancas (oitava base)
+    'a': 0,  // C
+    's': 2,  // D
+    'd': 4,  // E
+    'f': 5,  // F
+    'g': 7,  // G
+    'h': 9,  // A
+    'j': 11, // B
+    // Teclas pretas
+    'w': 1,  // C#
+    'e': 3,  // D#
+    't': 6,  // F#
+    'y': 8,  // G#
+    'u': 10, // A#
+    // Segunda linha de teclas (oitava acima)
+    'z': 12, // C (oitava acima)
+    'x': 14, // D
+    'c': 16, // E
+    'v': 17, // F
+    'b': 19, // G
+    'n': 21, // A
+    'm': 23, // B
+    // Teclas pretas segunda linha
+    'q': 13, // C#
+    'r': 15, // D#
+    '5': 18, // F#
+    '6': 20, // G#
+    '7': 22, // A#
+  };
   
   // Process MIDI data when it changes - adapted for Tone.js format
   useEffect(() => {
@@ -231,6 +267,114 @@ export default function StylishPiano({
     window.addEventListener('mouseup', handleGlobalMouseUp);
     return () => window.removeEventListener('mouseup', handleGlobalMouseUp);
   }, [isDragging, pressedKeys, onNotePlay]);
+
+  // Keyboard handler - tocar piano com teclado físico
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      // Ignorar se estiver digitando em um input
+      if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') {
+        return;
+      }
+
+      const key = event.key.toLowerCase();
+      
+      // Controle de oitava (usando setas ou PageUp/PageDown)
+      if (event.key === 'ArrowLeft' || event.key === 'PageDown') {
+        event.preventDefault();
+        setKeyboardOctave(prev => Math.max(2, prev - 1));
+        return;
+      }
+      if (event.key === 'ArrowRight' || event.key === 'PageUp') {
+        event.preventDefault();
+        setKeyboardOctave(prev => Math.min(6, prev + 1));
+        return;
+      }
+
+      // Verificar se a tecla está mapeada e não está já pressionada
+      if (keyboardToNote.hasOwnProperty(key) && !pressedKeyboardKeys.has(key)) {
+        event.preventDefault();
+        
+        // Calcular nota MIDI
+        const noteOffset = keyboardToNote[key];
+        const midiNote = (keyboardOctave * 12) + noteOffset;
+        
+        // Verificar se a nota está dentro do range do piano
+        if (midiNote >= startNote && midiNote < startNote + keyCount) {
+          setPressedKeyboardKeys(prev => new Set([...prev, key]));
+          
+          // Adicionar à lista de teclas pressionadas
+          setPressedKeys(prev => {
+            if (!prev.includes(midiNote)) {
+              return [...prev, midiNote];
+            }
+            return prev;
+          });
+          
+          // Atualizar info da nota ativa
+          setActiveNoteInfo({ 
+            note: midiNote, 
+            name: getNoteNameWithOctave(midiNote) 
+          });
+          
+          // Tocar a nota
+          if (onNotePlay) {
+            onNotePlay({
+              type: 9,
+              channel: 0,
+              data: [midiNote, 100]
+            });
+          }
+        }
+      }
+    };
+
+    const handleKeyUp = (event) => {
+      const key = event.key.toLowerCase();
+      
+      // Ignorar controle de oitava
+      if (event.key === 'ArrowLeft' || event.key === 'ArrowRight' || 
+          event.key === 'PageUp' || event.key === 'PageDown') {
+        return;
+      }
+
+      if (keyboardToNote.hasOwnProperty(key) && pressedKeyboardKeys.has(key)) {
+        event.preventDefault();
+        
+        // Calcular nota MIDI
+        const noteOffset = keyboardToNote[key];
+        const midiNote = (keyboardOctave * 12) + noteOffset;
+        
+        // Verificar se a nota está dentro do range do piano
+        if (midiNote >= startNote && midiNote < startNote + keyCount) {
+          setPressedKeyboardKeys(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(key);
+            return newSet;
+          });
+          
+          // Remover da lista de teclas pressionadas
+          setPressedKeys(prev => prev.filter(note => note !== midiNote));
+          
+          // Parar a nota
+          if (onNotePlay) {
+            onNotePlay({
+              type: 8,
+              channel: 0,
+              data: [midiNote, 0]
+            });
+          }
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
+  }, [keyboardOctave, pressedKeyboardKeys, onNotePlay, startNote, keyCount]);
   
   // Generate keys
   const whiteNotes = [];
@@ -252,6 +396,18 @@ export default function StylishPiano({
 
   return (
     <div className={styles.pianoContainer} ref={containerRef}>
+      {/* Indicador de oitava e guia de teclas */}
+      <div className={styles.keyboardInfo}>
+        <div className={styles.octaveIndicator}>
+          <span className={styles.octaveLabel}>Oitava: C{keyboardOctave}</span>
+          <span className={styles.octaveHint}>(← → ou PageUp/PageDown para mudar)</span>
+        </div>
+        <div className={styles.keyboardGuide}>
+          <span className={styles.guideLabel}>Teclado:</span>
+          <span className={styles.guideKeys}>A S D F G H J (brancas) | W E T Y U (pretas)</span>
+        </div>
+      </div>
+      
       {/* Nota ativa indicador */}
       {activeNoteInfo && (
         <div className={styles.activeNoteIndicator}>

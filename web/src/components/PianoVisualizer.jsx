@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 // Removed Script import since we don't need it
 import styles from './PianoVisualizer.module.css';
 import * as Tone from 'tone';
@@ -18,12 +18,32 @@ export default function PianoVisualizer() {
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [audioFile, setAudioFile] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [moisesApiKey, setMoisesApiKey] = useState('');
+  
+  // Carregar API key do localStorage ao montar o componente
+  useEffect(() => {
+    const savedKey = localStorage.getItem('moises_api_key');
+    if (savedKey) {
+      setMoisesApiKey(savedKey);
+    }
+
+    // Escutar mudanças na API key
+    const handleApiKeyChange = (event) => {
+      setMoisesApiKey(event.detail || '');
+    };
+
+    window.addEventListener('moisesApiKeyChanged', handleApiKeyChange);
+
+    return () => {
+      window.removeEventListener('moisesApiKeyChanged', handleApiKeyChange);
+    };
+  }, []);
   
   // Secret dev mode function to load mock files from public directory
   const loadDevMockFiles = async () => {
     setLoading(true);
-    setFileName('devinteste.mp3');
-    const audioUrl = '/devinteste.mp3';
+    setFileName('take.mp3');
+    const audioUrl = '/take.mp3';
     
     try {
       // Fetch the audio file from public directory
@@ -33,7 +53,7 @@ export default function PianoVisualizer() {
       const audioObjectUrl = URL.createObjectURL(audioBlob);
       
       // Fetch the MIDI file from public directory
-      const midiResponse = await fetch('/devinteste.mid');
+      const midiResponse = await fetch('/take.mid');
       const midiArrayBuffer = await midiResponse.arrayBuffer();
       
       // Load the MIDI data using the correct Midi parser
@@ -48,7 +68,7 @@ export default function PianoVisualizer() {
         
         // If we have mock chord data, format it properly too
         try {
-          fetch('/devinteste-chords.json')
+          fetch('/take.json')
             .then(res => res.json())
             .then(chords => {
               if (Array.isArray(chords)) {
@@ -102,15 +122,29 @@ export default function PianoVisualizer() {
         const res = await fetch('/api/processAudio', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ audioBase64: base64Data })
+          body: JSON.stringify({ 
+            audioBase64: base64Data,
+            apiKey: moisesApiKey || localStorage.getItem('moises_api_key')
+          })
         });
+        
+        // Verificar se houve erro na resposta
+        if (!res.ok) {
+          const errorData = await res.json().catch(() => ({ error: 'Erro desconhecido' }));
+          throw new Error(errorData.error || `Erro ${res.status}: ${res.statusText}`);
+        }
         
         // Get both MIDI and chord data
         const responseData = await res.json();
-        const { midiBase64, chords, pianoOutputBuffer } = responseData;
+        const { midiBase64, chords, pianoOutputBuffer, error } = responseData;
+        
+        // Verificar se há erro na resposta
+        if (error) {
+          throw new Error(error);
+        }
         
         if (!midiBase64) {
-          throw new Error('MIDI data not received from server');
+          throw new Error('Dados MIDI não recebidos do servidor');
         }
         
         console.log("Chords", chords);
@@ -156,7 +190,14 @@ export default function PianoVisualizer() {
         }
       } catch (error) {
         console.error("Erro ao processar o arquivo MIDI:", error);
-        alert('Ocorreu um erro ao processar o arquivo de áudio.');
+        const errorMessage = error.message || 'Ocorreu um erro ao processar o arquivo de áudio.';
+        
+        // Mensagem específica para erro de API key
+        if (errorMessage.includes('API Key') || errorMessage.includes('apiKey')) {
+          alert('⚠️ ' + errorMessage + '\n\nPor favor, configure sua Moises API Key clicando no botão "🔑 API Key" no cabeçalho.');
+        } else {
+          alert('❌ ' + errorMessage);
+        }
       } finally {
         setLoading(false);
       }
@@ -395,8 +436,8 @@ export default function PianoVisualizer() {
     transform: 'translateX(-120%)',
     zIndex: 1001,
     padding: '10px 20px',
-    backgroundColor: 'var(--primary-color)',
-    color: 'white',
+    backgroundColor: '#00e5c7',
+    color: 'black',
     border: 'none',
     borderRadius: '50px',
     cursor: 'pointer',
@@ -411,6 +452,16 @@ export default function PianoVisualizer() {
     const seconds = Math.floor(timeInSeconds % 60);
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
+
+  // Memoize the data passed to PianoTilesContainer to prevent unnecessary re-renders
+  const pianoTilesProps = useMemo(() => ({
+    midiData: midiLoaded,
+    fileName,
+    audioData: audioFile,
+    autoOpenMidiConnector: true,
+    chordsData,
+    renderChords: !!chordsData
+  }), [midiLoaded, fileName, audioFile, chordsData]);
 
   return (
     <>
@@ -427,14 +478,7 @@ export default function PianoVisualizer() {
             </div>
             
             <div className={styles.visualizationContainer}>
-              <PianoTilesContainer
-                midiData={midiLoaded} 
-                fileName={fileName}
-                audioData={audioFile}
-                autoOpenMidiConnector={true}
-                chordsData={chordsData} 
-                renderChords={!!chordsData} // Add a boolean flag to control chord rendering
-              />
+              <PianoTilesContainer {...pianoTilesProps} />
             </div>
             
             <button 
@@ -450,7 +494,7 @@ export default function PianoVisualizer() {
           className="piano-container" 
           id="piano-container" 
           style={{ 
-            width: '100%', 
+            width: '50%', 
             height: '100%',
             display: 'flex',
             flexDirection: 'column',

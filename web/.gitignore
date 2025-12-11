@@ -23,7 +23,11 @@
 
 # production
 /build
+<<<<<<< HEAD
 
+=======
+*.pth
+>>>>>>> origin/web
 # misc
 .DS_Store
 *.pem

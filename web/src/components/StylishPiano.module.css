@@ -197,6 +197,56 @@
     }
   }
 
+  .keyboardInfo {
+    position: absolute;
+    top: -45px;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 20px;
+    z-index: 50;
+    font-size: 12px;
+    color: #666;
+  }
+
+  .octaveIndicator {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .octaveLabel {
+    font-weight: 600;
+    color: #333;
+  }
+
+  .octaveHint {
+    font-size: 10px;
+    color: #999;
+    font-style: italic;
+  }
+
+  .keyboardGuide {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .guideLabel {
+    font-weight: 500;
+    color: #333;
+  }
+
+  .guideKeys {
+    font-family: 'Courier New', monospace;
+    background: rgba(0, 0, 0, 0.05);
+    padding: 4px 8px;
+    border-radius: 4px;
+    color: #555;
+  }
+
   .activeNoteIndicator {
     position: absolute;
     top: -60px;

@@ -7,6 +7,8 @@ import MidiDeviceConnector from './MidiDeviceConnector';
 import ChordCarousel from './ChordCarousel'; // Import the new component
 import ScoreSystem from './ScoreSystem'; // Add ScoreSystem import
 import FireEffect from './FireEffect'; // Add FireEffect import
+import * as Tone from 'tone';
+import Soundfont from 'soundfont-player';
 import styles from './PianoTiles.module.css';
 
 // Define consistent timing offsets for all components
@@ -31,6 +33,11 @@ export default function PianoTilesContainer({ midiData, fileName, audioData, aut
   const containerRef = useRef(null);
   const timeUpdateRef = useRef(null);
   const midiDataLoadedRef = useRef(false);
+  
+  // Refs para sistema de som do teclado físico
+  const soundfontPlayerRef = useRef(null);
+  const activeNotesRef = useRef({});
+  const audioContextRef = useRef(null);
   
   // Apply vibration effect to relevant components
   const applyVibrationStyle = (element, intensity) => {
@@ -115,21 +122,104 @@ export default function PianoTilesContainer({ midiData, fileName, audioData, aut
     };
   }, []);
   
-  // Handle note plays from the piano
+  // Inicializar sistema de som para teclado físico
+  useEffect(() => {
+    const initSoundSystem = async () => {
+      try {
+        // Criar AudioContext se não existir
+        if (!audioContextRef.current) {
+          audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
+        }
+
+        // Carregar instrumento Soundfont
+        if (!soundfontPlayerRef.current && audioContextRef.current) {
+          // Verificar e resumir o contexto de áudio se necessário
+          if (audioContextRef.current.state === 'suspended') {
+            await audioContextRef.current.resume();
+          }
+
+          // Carregar piano acústico
+          const player = await Soundfont.instrument(audioContextRef.current, 'acoustic_grand_piano', {
+            soundfont: 'FluidR3_GM',
+            format: 'mp3',
+            url: 'https://gleitz.github.io/midi-js-soundfonts/FluidR3_GM/'
+          });
+
+          soundfontPlayerRef.current = player;
+        }
+      } catch (error) {
+        console.error('Erro ao inicializar sistema de som:', error);
+      }
+    };
+
+    initSoundSystem();
+  }, []);
+
+  // Handle note plays from the piano (mouse, teclado físico, etc)
   const handleNotePlay = useCallback((midiEvent) => {
     // Only process notes if MIDI sound is enabled
     if (isMidiSoundEnabled) {
+      const noteNumber = midiEvent.data[0];
+      const velocity = midiEvent.data[1] || 100;
+      
       // Filter notes outside the valid range (36-95)
-      if (midiEvent.data[0] >= 36 && midiEvent.data[0] <= 95) {
+      if (noteNumber >= 36 && noteNumber <= 95) {
+        // Atualizar estado visual
         setPlayedMidiNotes(prev => {
-          if (midiEvent.type === 9 && midiEvent.data[1] > 0) {
+          if (midiEvent.type === 9 && velocity > 0) {
             // Note on event
-            return [...prev.filter(note => note !== midiEvent.data[0]), midiEvent.data[0]];
+            return [...prev.filter(note => note !== noteNumber), noteNumber];
           } else {
             // Note off event
-            return prev.filter(note => note !== midiEvent.data[0]);
+            return prev.filter(note => note !== noteNumber);
           }
         });
+
+        // Tocar som usando Soundfont (para teclado físico e mouse)
+        if (soundfontPlayerRef.current && audioContextRef.current) {
+          try {
+            // Verificar e resumir o contexto de áudio antes de tocar
+            if (audioContextRef.current.state === 'suspended') {
+              audioContextRef.current.resume();
+            }
+
+            // Convert MIDI note number to note name (e.g., 60 = "C4")
+            const noteName = Tone.Frequency(noteNumber, "midi").toNote();
+
+            if (midiEvent.type === 9 && velocity > 0) {
+              // Note On
+              // Normalize velocity (0-127) to (0-1)
+              const normalizedVelocity = velocity / 127;
+              
+              // Apply sensitivity curve for better dynamics
+              const enhancedVelocity = Math.min(Math.sqrt(normalizedVelocity) * 1.7, 1.0);
+              
+              // Stop previous note if it's still playing (for same note)
+              if (activeNotesRef.current[noteName]) {
+                activeNotesRef.current[noteName].stop();
+              }
+              
+              // Play the note
+              activeNotesRef.current[noteName] = soundfontPlayerRef.current.play(
+                noteName, 
+                0, // Start immediately
+                { 
+                  gain: enhancedVelocity,
+                  duration: 2.5, // Duração longa o suficiente para sustentar a nota
+                  adsr: [0.01, 0.1, 0.7, 0.5] // Ataque rápido, decay curto, sustain médio, release médio
+                }
+              );
+            } else if (midiEvent.type === 8 || velocity === 0) {
+              // Note Off
+              if (activeNotesRef.current[noteName]) {
+                activeNotesRef.current[noteName].stop();
+                delete activeNotesRef.current[noteName];
+              }
+            }
+          } catch (error) {
+            console.error('Erro ao tocar nota:', error);
+          }
+        }
       }
     }
   }, [isMidiSoundEnabled]);
@@ -168,9 +258,19 @@ export default function PianoTilesContainer({ midiData, fileName, audioData, aut
   const handleMidiSoundToggle = useCallback((enabled) => {
     setIsMidiSoundEnabled(enabled);
     
-    // If disabling sound, clear any currently played notes
+    // If disabling sound, clear any currently played notes and stop all sounds
     if (!enabled) {
       setPlayedMidiNotes([]);
+      
+      // Parar todas as notas que estão tocando
+      Object.values(activeNotesRef.current).forEach(note => {
+        try {
+          note.stop();
+        } catch (error) {
+          console.error('Erro ao parar nota:', error);
+        }
+      });
+      activeNotesRef.current = {};
     }
   }, []);
   

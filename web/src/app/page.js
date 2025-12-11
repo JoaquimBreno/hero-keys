@@ -1,9 +1,18 @@
 // FILE: page.js
 'use client';
-import React from 'react';
+import React, { useState } from 'react';
 import PianoVisualizer from '@/components/PianoVisualizer.jsx';
+import ApiKeyConfig from '@/components/ApiKeyConfig.jsx';
 
 export default function Home() {
+  const [apiKey, setApiKey] = useState('');
+
+  const handleApiKeyChange = (newApiKey) => {
+    setApiKey(newApiKey);
+    // Disparar evento customizado para atualizar outros componentes
+    window.dispatchEvent(new CustomEvent('moisesApiKeyChanged', { detail: newApiKey }));
+  };
+
   return (
     <div className="container" style={{
       display: 'flex',
@@ -61,6 +70,14 @@ export default function Home() {
         }}>
           Visualização profissional de MIDI para performances musicais refinadas
         </p>
+
+        <div style={{
+          marginLeft: 'auto',
+          display: 'flex',
+          alignItems: 'center',
+        }}>
+          <ApiKeyConfig onApiKeyChange={handleApiKeyChange} />
+        </div>
       </header>
 
       <main style={{

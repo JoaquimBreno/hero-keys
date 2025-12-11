@@ -4,14 +4,23 @@ import path from 'path';
 import fetch from 'node-fetch';
 import Moises from 'moises/sdk';
 
-const moises = new Moises({ 
-  apiKey: process.env.MOISES_API_KEY 
-});
-
 export async function POST(request) {
   console.log('processAudio API called');
   try {
-    const { audioBase64 } = await request.json();
+    const { audioBase64, apiKey } = await request.json();
+    
+    // Usa a API key do cliente ou a do servidor como fallback
+    const moisesApiKey = apiKey || process.env.MOISES_API_KEY;
+    
+    if (!moisesApiKey) {
+      return NextResponse.json({ 
+        error: 'Moises API Key não fornecida. Por favor, configure sua API Key nas configurações.' 
+      }, { status: 400 });
+    }
+
+    const moises = new Moises({ 
+      apiKey: moisesApiKey 
+    });
     
     if (!audioBase64) {
       return NextResponse.json({ error: 'Parâmetro audioBase64 é obrigatório.' }, { status: 400 });
@@ -69,7 +78,7 @@ export async function POST(request) {
     }
 
     // Enviar o arquivo para a API Python
-    const response = await fetch('http://localhost:8000/generate_midi', {
+    const response = await fetch('https://b7544b2869dc.ngrok-free.app/generate_midi', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ audioBase64: pianoOutputBase64, filename: 'piano_output.mp3' })

@@ -2,6 +2,21 @@
 import React, { useState, useRef, useEffect, forwardRef, useImperativeHandle } from 'react';
 import styles from './AudioPlayer.module.css';
 
+// Use public directory paths instead of imports
+const ICON_PATHS = {
+  mute: '/mute.svg',
+  unmute: '/unmute.svg',
+  chord: '/chord.svg',
+  sheetMusic: '/sheet-music.svg',
+  keys: '/keys.svg',
+  noKeys: '/no-keys.svg',
+  play: '/play.svg',
+  pause: '/pause.svg',
+  volumeLow: '/volume-low.svg',
+  volumeMedium: '/volume-medium.svg',
+  volumeHigh: '/volume-high.svg',
+};
+
 const AudioPlayer = forwardRef(({ 
   audioData, 
   onTimeUpdate, 
@@ -18,18 +33,31 @@ const AudioPlayer = forwardRef(({
   const [duration, setDuration] = useState(0);
   const [isMuted, setIsMuted] = useState(false);
   const [progressPercent, setProgressPercent] = useState(0);
+  // Add playback rate state
+  const [playbackRate, setPlaybackRate] = useState(1);
+  // Add volume state for both audio and MIDI
+  const [audioVolume, setAudioVolume] = useState(1);
+  const [midiVolume, setMidiVolume] = useState(1);
+  const [showVolumeControls, setShowVolumeControls] = useState(false);
+  const [volumeControlType, setVolumeControlType] = useState('audio'); // 'audio' or 'midi'
+  
+  const playbackRates = [0.25, 0.5, 1, 1.25, 1.5];
+  const volumeLevels = [0, 0.25, 0.5, 0.75, 1];
+  
   const audioRef = useRef(null);
   const currentTimeRef = useRef(0);
   const seekingRef = useRef(false);
   const animationFrameRef = useRef(null);
   const seekBarContainerRef = useRef(null);
   const onTimeUpdateRef = useRef(onTimeUpdate);
-
+  const volumeControlRef = useRef(null);
+  const lastUIUpdateRef = useRef(0);
+  
   // Update the ref when onTimeUpdate changes
   useEffect(() => {
     onTimeUpdateRef.current = onTimeUpdate;
   }, [onTimeUpdate]);
-  
+
   // Expose seekToTime function to parent components
   useImperativeHandle(ref, () => ({
     seekToTime: (timeInMs) => {
@@ -77,6 +105,9 @@ const AudioPlayer = forwardRef(({
     if (audioRef.current) {
       audioRef.current.src = audioUrl;
       audioRef.current.load();
+      // Set initial playback rate and volume
+      audioRef.current.playbackRate = playbackRate;
+      audioRef.current.volume = audioVolume;
     }
     
     // Only revoke URL if we created it
@@ -86,6 +117,38 @@ const AudioPlayer = forwardRef(({
       }
     };
   }, [audioData]);
+
+  // Update playback rate and volume when they change
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.playbackRate = playbackRate;
+      audioRef.current.volume = audioVolume;
+      audioRef.current.muted = audioVolume === 0;
+    }
+  }, [playbackRate, audioVolume]);
+  
+  // Update MIDI volume when it changes
+  useEffect(() => {
+    if (onMidiSoundToggle) {
+      onMidiSoundToggle(midiVolume > 0);
+    }
+  }, [midiVolume, onMidiSoundToggle]);
+  
+  // Close volume control popup when clicking outside
+  useEffect(() => {
+    if (!showVolumeControls) return;
+    
+    const handleClickOutside = (event) => {
+      if (volumeControlRef.current && !volumeControlRef.current.contains(event.target)) {
+        setShowVolumeControls(false);
+      }
+    };
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showVolumeControls]);
   
   // Handle metadata loaded
   const handleMetadataLoaded = () => {
@@ -102,12 +165,15 @@ const AudioPlayer = forwardRef(({
         const previousTime = currentTimeRef.current;
         currentTimeRef.current = time;
         
-        // Only update display time (less frequent) to avoid re-renders
-        setDisplayTime(time); 
-        setProgressPercent((time / audioRef.current.duration) * 100);
+        // Throttle UI updates to 4 times per second (250ms)
+        const now = Date.now();
+        if (now - lastUIUpdateRef.current > 250) {
+          setDisplayTime(time);
+          setProgressPercent((time / (audioRef.current.duration || 1)) * 100);
+          lastUIUpdateRef.current = now;
+        }
         
         // Always report current time to parent for synchronization
-        // even for small changes to ensure precise note visualization
         if (onTimeUpdateRef.current && (Math.abs(time - previousTime) > 0.01 || time !== previousTime)) {
           onTimeUpdateRef.current(time * 1000); // Convert to milliseconds for MIDI sync
         }
@@ -115,14 +181,17 @@ const AudioPlayer = forwardRef(({
       animationFrameRef.current = requestAnimationFrame(updateTime);
     };
     
-    animationFrameRef.current = requestAnimationFrame(updateTime);
+    if (isPlaying) {
+      animationFrameRef.current = requestAnimationFrame(updateTime);
+    }
     
     return () => {
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
+        animationFrameRef.current = null;
       }
     };
-  }, [isPlaying]); // Removed onTimeUpdate from dependencies
+  }, [isPlaying]);
   
   // Handle play/pause
   const togglePlay = () => {
@@ -136,19 +205,42 @@ const AudioPlayer = forwardRef(({
     }
   };
   
-  // Toggle mute function - mute but keep playing
-  const toggleMute = () => {
-    if (audioRef.current) {
-      audioRef.current.muted = !audioRef.current.muted;
-      setIsMuted(!isMuted);
-    }
+  // Get volume icon based on level
+  const getVolumeIcon = (volume) => {
+    if (volume === 0) return ICON_PATHS.mute;
+    if (volume < 0.5) return ICON_PATHS.volumeLow;
+    if (volume < 0.8) return ICON_PATHS.volumeMedium;
+    return ICON_PATHS.volumeHigh;
   };
   
-  // New function to handle MIDI sound toggle
-  const handleMidiSoundToggle = () => {
-    if (onMidiSoundToggle) {
-      onMidiSoundToggle(!isMidiSoundEnabled);
+  // Show volume controls for audio
+  const showAudioVolumeControls = () => {
+    setVolumeControlType('audio');
+    setShowVolumeControls(true);
+  };
+  
+  // Show volume controls for MIDI
+  const showMidiVolumeControls = () => {
+    setVolumeControlType('midi');
+    setShowVolumeControls(true);
+  };
+  
+  // Set volume level
+  const setVolumeLevel = (level) => {
+    if (volumeControlType === 'audio') {
+      setAudioVolume(level);
+      setIsMuted(level === 0);
+      if (audioRef.current) {
+        audioRef.current.volume = level;
+        audioRef.current.muted = level === 0;
+      }
+    } else {
+      setMidiVolume(level);
+      if (onMidiSoundToggle) {
+        onMidiSoundToggle(level > 0);
+      }
     }
+    setShowVolumeControls(false);
   };
   
   // Handle seek - fixed to prevent infinite loop
@@ -162,6 +254,13 @@ const AudioPlayer = forwardRef(({
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
     return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  // Handle playback rate change
+  const handlePlaybackRateChange = () => {
+    const currentIndex = playbackRates.indexOf(playbackRate);
+    const nextIndex = (currentIndex + 1) % playbackRates.length;
+    setPlaybackRate(playbackRates[nextIndex]);
   };
   
   return (
@@ -182,29 +281,76 @@ const AudioPlayer = forwardRef(({
           onClick={togglePlay}
           aria-label={isPlaying ? 'Pause' : 'Play'}
         >
-          {isPlaying ? '❚❚' : '▶'}
+          <img src={isPlaying ? ICON_PATHS.pause : ICON_PATHS.play} alt={isPlaying ? "Pause" : "Play"} />
         </button>
         
-        {/* Add mute button */}
-        <button
-          className={`${styles.controlButton} ${isMuted ? styles.activeMute : ''}`}
-          onClick={toggleMute}
-          aria-label={isMuted ? 'Unmute' : 'Mute'}
-          title={isMuted ? 'Unmute' : 'Mute'}
-        >
-          M
-        </button>
-        
-        {/* New MIDI sound toggle button */}
-        {onMidiSoundToggle && (
+        {/* Audio volume button */}
+        <div className={styles.volumeControl}>
           <button
-            className={`${styles.controlButton} ${!isMidiSoundEnabled ? styles.midiSoundDisabled : ''}`}
-            onClick={handleMidiSoundToggle}
-            aria-label={isMidiSoundEnabled ? 'Disable MIDI Sound' : 'Enable MIDI Sound'}
-            title={isMidiSoundEnabled ? 'Disable MIDI Sound' : 'Enable MIDI Sound'}
+            className={`${styles.controlButton} ${audioVolume === 0 ? styles.activeMute : ''}`}
+            onClick={showAudioVolumeControls}
+            aria-label="Audio Volume"
+            title="Audio Volume"
           >
-            {isMidiSoundEnabled ? '🎹' : '🔇'}
+            <img src={ICON_PATHS.mute} alt="Audio Volume" />
           </button>
+          
+          {showVolumeControls && volumeControlType === 'audio' && (
+            <div className={styles.volumePopup} ref={volumeControlRef}>
+              <div className={styles.volumeSlider}>
+                {volumeLevels.map(level => (
+                  <button 
+                    key={level}
+                    className={`${styles.volumeButton} ${audioVolume === level ? styles.activeVolume : ''}`}
+                    onClick={() => setVolumeLevel(level)}
+                  >
+                    {level === 0 ? 'Mute' : Math.round(level * 100) + '%'}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Add playback rate button */}
+        <button
+          className={`${styles.controlButton} ${styles.rateButton}`}
+          onClick={handlePlaybackRateChange}
+          aria-label={`Change playback speed, current: ${playbackRate}x`}
+          title="Change playback speed"
+        >
+          {playbackRate}x
+        </button>
+        
+        {/* MIDI volume control button */}
+        {onMidiSoundToggle && (
+          <div className={styles.volumeControl}>
+            <button
+              className={`${styles.controlButton} ${midiVolume === 0 ? styles.midiSoundDisabled : ''}`}
+              onClick={showMidiVolumeControls}
+              aria-label="MIDI Volume"
+              title="MIDI Volume"
+            >
+              <img src={midiVolume > 0 ? ICON_PATHS.keys : ICON_PATHS.noKeys} 
+                   alt={midiVolume > 0 ? "MIDI sound enabled" : "MIDI sound disabled"} />
+            </button>
+            
+            {showVolumeControls && volumeControlType === 'midi' && (
+              <div className={styles.volumePopup} ref={volumeControlRef}>
+                <div className={styles.volumeSlider}>
+                  {volumeLevels.map(level => (
+                    <button 
+                      key={level}
+                      className={`${styles.volumeButton} ${midiVolume === level ? styles.activeVolume : ''}`}
+                      onClick={() => setVolumeLevel(level)}
+                    >
+                      {level === 0 ? 'Off' : Math.round(level * 100) + '%'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         )}
         
         <div className={styles.timeInfo}>
@@ -241,7 +387,8 @@ const AudioPlayer = forwardRef(({
             aria-label={showSheetMusic ? 'Show Notes' : 'Show Sheet Music'}
             title={showSheetMusic ? 'Show Notes' : 'Show Sheet Music'}
           >
-            {showSheetMusic ? '🎹' : '🎼'}
+            <img src={showSheetMusic ? ICON_PATHS.keys : ICON_PATHS.sheetMusic} 
+                 alt={showSheetMusic ? "Show Notes" : "Show Sheet Music"} />
           </button>
         )}
         
@@ -253,7 +400,8 @@ const AudioPlayer = forwardRef(({
             aria-label={showChordCarousel ? 'Hide Chords' : 'Show Chords'}
             title={showChordCarousel ? 'Hide Chords' : 'Show Chords'}
           >
-            {showChordCarousel ? 'C' : '🎵'}
+            {/* {showChordCarousel ? 'C' : '🎵'} */}
+            {showChordCarousel ? <img src={ICON_PATHS.chord} alt="Chord" /> : 'C' }
           </button>
         )}
       </div>
