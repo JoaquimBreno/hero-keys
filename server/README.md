@@ -15,11 +15,18 @@ API FastAPI para geração de MIDI a partir de arquivos de áudio.
    - Crie um novo Web Service
    - Conecte seu repositório Git
 
-2. **Configurações no Render**
+2. **Configurar Diretório Raiz (IMPORTANTE)**
+   - Nas configurações do serviço, vá em **Settings**
+   - Encontre a opção **Root Directory**
+   - Defina como: `server`
+   - Isso fará o Render usar a pasta `server` como diretório raiz do projeto
+
+3. **Configurações no Render**
    - **Build Command**: `pip install -r requirements.txt`
-   - **Start Command**: `uvicorn src.app:app --host 0.0.0.0 --port $PORT`
+   - **Start Command**: `cd src && uvicorn app:app --host 0.0.0.0 --port $PORT`
    - **Environment**: Python 3
    - **Python Version**: 3.9.18
+   - **Root Directory**: `server` ⚠️ **IMPORTANTE: Configure isso!**
 
 3. **Variáveis de Ambiente**
    - `ALLOWED_ORIGINS`: Domínios permitidos para CORS (separados por vírgula)
