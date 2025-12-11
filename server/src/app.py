@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import base64
 import os
+import gc
 from typing import Optional
 from pathlib import Path
 
@@ -70,6 +71,9 @@ def process_audio(request: AudioRequest):
         # Limpar arquivos temporários após processamento
         cleanup_temp_files()
         
+        # Limpar memória após processamento
+        gc.collect()
+        
         # Retorna apenas o base64 do MIDI
         return {
             "midi_base64": result["midi_base64"]
@@ -78,5 +82,6 @@ def process_audio(request: AudioRequest):
     except Exception as e:
         # Limpar em caso de erro também
         cleanup_temp_files()
+        gc.collect()
         raise HTTPException(status_code=500, detail=f"Error processing audio: {str(e)}")
     

@@ -78,7 +78,7 @@ export async function POST(request) {
     }
 
     // Enviar o arquivo para a API Python
-    const response = await fetch('https://b7544b2869dc.ngrok-free.app/generate_midi', {
+    const response = await fetch('https://hero-keys.onrender.com/generate_midi', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ audioBase64: pianoOutputBase64, filename: 'piano_output.mp3' })
