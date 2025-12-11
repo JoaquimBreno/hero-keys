@@ -21,6 +21,11 @@ RUN mkdir -p src/temp
 # Expor a porta que o FastAPI usará
 EXPOSE 8000
 
+# Definir PYTHONPATH para incluir o diretório src
+ENV PYTHONPATH=/app/src
+
 # Comando para iniciar o servidor (Render usa variável $PORT)
-CMD uvicorn src.app:app --host 0.0.0.0 --port ${PORT:-8000}
+# Executar de dentro de src com PYTHONPATH definido
+WORKDIR /app/src
+CMD PYTHONPATH=. uvicorn app:app --host 0.0.0.0 --port ${PORT:-8000}
 
